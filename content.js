@@ -57,10 +57,14 @@ function appendChildren(parent, children) {
 function addTabs(nodes) {
     for (index in Array.from(nodes)) {
         tab = document.createElement("span"); tab.className = "tab"
-        tabCover = document.createElement("span"); tabCover.className = "tab-cover"
+        tabSlide = document.createElement("div"); tabSlide.className = "tab-slide"
+        tabIcon = document.createElement("div"); tabIcon.className = "tab-icon"
+        tabCover = document.createElement("div"); tabCover.className = "tab-cover"
+        tabSlide.appendChild(tabIcon);
+        tab.appendChild(tabSlide);
+        tab.appendChild(tabCover);
         nodes[index].style = "z-index: 1; overflow: visible;"
-        nodes[index].appendChild(tab); nodes[index].appendChild(tabCover)
-        nodes[index].insertBefore(tabCover, nodes[index].firstChild)
+        nodes[index].appendChild(tab);
         nodes[index].insertBefore(tab, nodes[index].firstChild)
     }
 }
@@ -74,13 +78,20 @@ function addTabListeners(nodes) {
 }
 
 function pullTab(e) {
-    if (pulledTab) { pulledTab.style.left = "0px" }
-    e.currentTarget.firstChild.style.left = "40px"
+    if (pulledTab) {
+        pulledTab.firstChild.style.left = "0px"
+        pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px white"
+    }
     pulledTab = e.currentTarget.firstChild
+    pulledTab.firstChild.style.left = "40px"
+    pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px gray"
 }
 
 function pushTab(e) {
-    if (pulledTab) { pulledTab.style.left = "0px" }
+    if (pulledTab) {
+        pulledTab.firstChild.style.left = "0px"
+        pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px white"
+    }
 }
 
 // If the user browses to a different location, run it again
