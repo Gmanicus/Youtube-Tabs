@@ -37,3 +37,15 @@
     background-image: url("https://i.imgur.com/0x9oifS.png");
     background-size: contain;
 }
+
+.tab-menu {
+    z-index: 1;
+    position: absolute;
+    width: 100px;
+    height: 150px;
+    top: 0;
+    left: 0;
+
+    background-color: white;
+    border: solid 1px #ddd;
+}

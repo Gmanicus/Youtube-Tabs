@@ -2,8 +2,10 @@
 var currentURL = "";
 var guide = document.getElementById("guide-content")
 var innerGuide = document.getElementById("guide-inner-content")
+var widgetContainer = null
 var scrollDist = 0
 var pulledTab = null
+var pulledMenu = null
 
 function waitForPageLoad() {
     check = setInterval(function(){
@@ -31,7 +33,7 @@ function setupTabs() {
     // Allow overflow to make tabs visible
     guide.style.overflow = "visible"
     innerGuide.style.overflow = "visible"
-    innerGuide.style.transition = "all 0.05s ease"
+    innerGuide.style.transition = "all 0.05s ease-out"
     innerGuide.addEventListener("wheel", function(e) {
         scrollDist -= e.deltaY
         scrollDist = Math.min(Math.max(scrollDist, -innerGuide.offsetHeight + window.innerHeight), 0)
@@ -39,6 +41,7 @@ function setupTabs() {
     })
 
     widgetContainer = document.querySelectorAll('[id=items]')[1]
+    widgetContainer.style.position = "relative"
     widgets = widgetContainer.childNodes
     expandableWidget = widgets[widgets.length-1]
     appendChildren(widgetContainer, Array.from(expandableWidget.childNodes[3].childNodes[1].childNodes))
@@ -79,6 +82,7 @@ function addTabListeners(nodes) {
 }
 
 function pullTab(e) {
+    if (pulledMenu) { return }
     if (pulledTab) {
         pulledTab.firstChild.style.left = "0px"
         pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px white"
@@ -87,19 +91,48 @@ function pullTab(e) {
     pulledTab.firstChild.style.left = "40px"
     pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px gray"
     pulledTab.lastChild.style.backgroundColor = "#ededed"
+    pulledTab.addEventListener('click', tabMenu)
 }
 
 function pushTab(e) {
+    if (pulledMenu) { return }
     if (pulledTab) {
         pulledTab.firstChild.style.left = "0px"
         pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px white"
         pulledTab.lastChild.style.backgroundColor = "white"
+        pulledTab.removeEventListener('click', tabMenu)
     }
+    e.stopPropagation()
+}
+
+function tabMenu(e) {
+    if (pulledMenu) { return }
+    e.stopPropagation()
+    pulledMenu = document.createElement("div"); pulledMenu.className = "tab-menu"
+    e.currentTarget.appendChild(pulledMenu)
+    // widgetContainer.appendChild(menu)
+
+    // widgetPos = getAbsPosition(e.currentTarget)
+    // containerPos = getAbsPosition(widgetContainer)
+    // difference = {x:widgetPos.x - containerPos.x, y:widgetPos.y - containerPos.y - menu.offsetHeight/2 + e.currentTarget.offsetHeight/2}
+    difference = {x:40, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2}
+
+    pulledMenu.style.left = difference.x + e.currentTarget.offsetWidth + "px"
+    pulledMenu.style.top = difference.y + "px"
+    // alert("Boo!")
+
+    // Click +
+    // List of tabs & "Add a Tab"
 }
 
 function getChannelID(node) {
     return node.childNodes[1].href.replace("https://www.youtube.com/channel/", "")
 }
+
+function getAbsPosition(element) {
+    var rect = element.getBoundingClientRect();
+    return {x:rect.left,y:rect.top}
+ }
 
 // If the user browses to a different location, run it again
 // I tried so many 'proper' ways to do this, including window.onlocationchange. Sometimes you have to screw the proper ways of doing things if they simply don't work or over-complicate things
