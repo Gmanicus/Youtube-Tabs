@@ -63,6 +63,7 @@ function addTabs(nodes) {
         tabSlide.appendChild(tabIcon);
         tab.appendChild(tabSlide);
         tab.appendChild(tabCover);
+        tab.id = getChannelID(nodes[index])
         nodes[index].style = "z-index: 1; overflow: visible;"
         nodes[index].appendChild(tab);
         nodes[index].insertBefore(tab, nodes[index].firstChild)
@@ -85,13 +86,19 @@ function pullTab(e) {
     pulledTab = e.currentTarget.firstChild
     pulledTab.firstChild.style.left = "40px"
     pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px gray"
+    pulledTab.lastChild.style.backgroundColor = "#ededed"
 }
 
 function pushTab(e) {
     if (pulledTab) {
         pulledTab.firstChild.style.left = "0px"
         pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px white"
+        pulledTab.lastChild.style.backgroundColor = "white"
     }
+}
+
+function getChannelID(node) {
+    return node.childNodes[1].href.replace("https://www.youtube.com/channel/", "")
 }
 
 // If the user browses to a different location, run it again

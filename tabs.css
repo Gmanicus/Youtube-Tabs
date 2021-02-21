@@ -14,7 +14,10 @@
     background-color: white;
     box-sizing: border-box;
     border: solid 1px #ddd;
-    transition: all 0.2s ease-out;
+    transition: left 0.2s ease-out, background-color 0.1s ease;
+} .tab-slide:hover {
+    background-color: #ddd;
+    cursor: pointer;
 }
 
 .tab-cover {
@@ -27,10 +30,10 @@
 }
 
 .tab-icon {
-    width: 30px;
-    height: 30px;
-    margin: 5px;
+    width: 20px;
+    height: 20px;
+    margin: 10px;
     float: right;
-    background-image: url("https://i.imgur.com/vbFYCwQ.png");
+    background-image: url("https://i.imgur.com/0x9oifS.png");
     background-size: contain;
 }
