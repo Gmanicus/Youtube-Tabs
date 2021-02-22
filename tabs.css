@@ -39,13 +39,38 @@
 }
 
 .tab-menu {
-    z-index: 1;
     position: absolute;
     width: 100px;
     height: 150px;
     top: 0;
     left: 0;
+    
+    z-index: 1;
+    justify-content: center;
+    text-align: center;
+    overflow-x: hidden;
 
     background-color: white;
+    box-sizing: border-box;
     border: solid 1px #ddd;
+    border-radius: 2px;
+}
+
+.menu-link {
+    position: relative;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px;
+    height: fit-content;
+} .menu-link:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+} ::-webkit-scrollbar-track {
+    background: #eee;
+} ::-webkit-scrollbar-thumb {
+    background: #888;
 }

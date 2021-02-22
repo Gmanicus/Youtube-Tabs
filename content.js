@@ -35,6 +35,7 @@ function setupTabs() {
     innerGuide.style.overflow = "visible"
     innerGuide.style.transition = "all 0.05s ease-out"
     innerGuide.addEventListener("wheel", function(e) {
+        if (pulledMenu) { return }
         scrollDist -= e.deltaY
         scrollDist = Math.min(Math.max(scrollDist, -innerGuide.offsetHeight + window.innerHeight), 0)
         innerGuide.style.marginTop = scrollDist + "px";
@@ -105,20 +106,30 @@ function pushTab(e) {
     e.stopPropagation()
 }
 
+function closeMenu(e) {
+    if (e.relatedTarget.parentElement == pulledMenu) { return } // JS stupidity causes 'mouseout' to call when hovering over child elements OF THE MENU!!!
+    pulledMenu.remove()
+    pulledMenu = null;
+    pushTab(e)
+}
+
 function tabMenu(e) {
     if (pulledMenu) { return }
     e.stopPropagation()
     pulledMenu = document.createElement("div"); pulledMenu.className = "tab-menu"
-    e.currentTarget.appendChild(pulledMenu)
-    // widgetContainer.appendChild(menu)
 
-    // widgetPos = getAbsPosition(e.currentTarget)
-    // containerPos = getAbsPosition(widgetContainer)
-    // difference = {x:widgetPos.x - containerPos.x, y:widgetPos.y - containerPos.y - menu.offsetHeight/2 + e.currentTarget.offsetHeight/2}
+    line = document.createElement("hr"); line.style = "border-top: 1px solid lightgray; width: 90%; margin: auto; padding-bottom: 5px; margin-top: 5px;";
+    menuItem = document.createElement("a"); menuItem.className = "menu-link"; menuItem.innerHTML = "ADD A TAB"
+    pulledMenu.appendChild(line)
+    pulledMenu.appendChild(menuItem)
+    e.currentTarget.appendChild(pulledMenu)
+
     difference = {x:40, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2}
 
     pulledMenu.style.left = difference.x + e.currentTarget.offsetWidth + "px"
     pulledMenu.style.top = difference.y + "px"
+
+    pulledMenu.addEventListener('mouseout', closeMenu)
     // alert("Boo!")
 
     // Click +
