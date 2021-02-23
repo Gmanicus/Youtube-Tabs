@@ -1,10 +1,21 @@
 .tab {
+    position: relative;
+    width: 100%;
+
+    padding-top: 10px;
+    border: 10px solid firebrick;
+    border-bottom-width: 0px;
+    border-right: hidden;
+    box-sizing: border-box;
+}
+
+.sub {
     position: absolute;
     height: 100%;
     width: 100%;
 }
 
-.tab-slide {
+.sub-slide {
     position: absolute;
     height: 100%;
     width: 100%;
@@ -15,12 +26,12 @@
     box-sizing: border-box;
     border: solid 1px #ddd;
     transition: left 0.2s ease-out, background-color 0.1s ease;
-} .tab-slide:hover {
+} .sub-slide:hover {
     background-color: #ddd;
     cursor: pointer;
 }
 
-.tab-cover {
+.sub-cover {
     position: absolute;
     height: 100%;
     width: 100%;
@@ -29,7 +40,7 @@
     box-shadow: 3px 0 1px -3px white;
 }
 
-.tab-icon {
+.sub-icon {
     width: 20px;
     height: 20px;
     margin: 10px;
@@ -38,7 +49,7 @@
     background-size: contain;
 }
 
-.tab-menu {
+.sub-menu {
     position: absolute;
     width: 100px;
     height: 150px;

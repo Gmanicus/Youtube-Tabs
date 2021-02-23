@@ -1,11 +1,13 @@
 // Developed by Grant @ GeekOverdriveStudio
 var currentURL = "";
+var scrollDist = 0
 var guide = document.getElementById("guide-content")
 var innerGuide = document.getElementById("guide-inner-content")
 var widgetContainer = null
-var scrollDist = 0
-var pulledTab = null
+var pulledSub = null
 var pulledMenu = null
+var subTabDict = {}
+var tabNodes = []
 
 function waitForPageLoad() {
     check = setInterval(function(){
@@ -18,19 +20,21 @@ function waitForPageLoad() {
             subList = document.getElementById("sections").childNodes[1].childNodes[3];
             expandBtn = subList.childNodes[subList.childNodes.length-1].childNodes[1].childNodes[1];
             expandBtn.click();
-            setupTabs();
+
+            //subTabDict = getSubCookies()
+            setupSubs();
         }
     }, 100);
 }
 
-function setupTabs() {
+function setupSubs() {
     console.log("Youtube Sub Tabs")
     // Get Second id=items div
     // Set sub widgets to childnodes of that div
     // Append the 'expandable' childnodes to widgets node list
     // Remove 'expandable' div
 
-    // Allow overflow to make tabs visible
+    // Allow overflow to make subs visible
     guide.style.overflow = "visible"
     innerGuide.style.overflow = "visible"
     innerGuide.style.transition = "all 0.05s ease-out"
@@ -40,16 +44,20 @@ function setupTabs() {
         scrollDist = Math.min(Math.max(scrollDist, -innerGuide.offsetHeight + window.innerHeight), 0)
         innerGuide.style.marginTop = scrollDist + "px";
     })
-
+    // Get the sub widget container
     widgetContainer = document.querySelectorAll('[id=items]')[1]
     widgetContainer.style.position = "relative"
-    widgets = widgetContainer.childNodes
-    expandableWidget = widgets[widgets.length-1]
+    // Get the "show more" widget, reposition the subs from within it to the container, and delete the expandable widget
+    expandableWidget = widgetContainer.childNodes[widgetContainer.childNodes.length-1]
     appendChildren(widgetContainer, Array.from(expandableWidget.childNodes[3].childNodes[1].childNodes))
-
     expandableWidget.remove()
-    addTabs(widgets)
-    addTabListeners(widgets)
+
+    // Get the sub widgets and add our new functionality to them
+    // Add tabs to the container
+    widgets = getSubs(widgetContainer);
+    addTabs(widgetContainer);
+    addSubSlides(widgets);
+    addSubListeners(widgets);
 }
 
 function appendChildren(parent, children) {
@@ -58,50 +66,76 @@ function appendChildren(parent, children) {
     }
 }
 
-function addTabs(nodes) {
+function addSubSlides(nodes) {
+    for (index in nodes) {
+        sub = document.createElement("span"); sub.className = "sub"
+        subSlide = document.createElement("div"); subSlide.className = "sub-slide"
+        subIcon = document.createElement("div"); subIcon.className = "sub-icon"
+        subCover = document.createElement("div"); subCover.className = "sub-cover"
+        subSlide.appendChild(subIcon);
+        sub.appendChild(subSlide);
+        sub.appendChild(subCover);
+        sub.id = getChannelID(nodes[index]);
+
+        nodes[index].style = "z-index: 1; overflow: visible;";
+        nodes[index].appendChild(sub);
+        nodes[index].insertBefore(sub, nodes[index].firstChild);
+
+        // If this subscription doesn't have a value in the subTab dictionary
+        if (!(sub.id in subTabDict)) {
+            tabNum = getRandomInt(3)
+            console.log(tabNum);
+            subTabDict[sub.id] = tabNum;
+            // Set sub as child of corresponding tab
+            tabNodes[tabNum].appendChild(nodes[index]);
+        }
+    }
+}
+
+function addSubListeners(nodes) {
+    // Close sub button if we mouse out of the 'items' div
+    widgetContainer.addEventListener('mouseout', pushSub)
+    for (index in nodes) {
+        nodes[index].addEventListener('mouseover', pullSub)
+        nodes[index].firstChild.addEventListener('mouseout', pushSub)
+    }
+}
+
+function mergeSubs(nodes) {
     for (index in Array.from(nodes)) {
-        tab = document.createElement("span"); tab.className = "tab"
-        tabSlide = document.createElement("div"); tabSlide.className = "tab-slide"
-        tabIcon = document.createElement("div"); tabIcon.className = "tab-icon"
-        tabCover = document.createElement("div"); tabCover.className = "tab-cover"
-        tabSlide.appendChild(tabIcon);
-        tab.appendChild(tabSlide);
-        tab.appendChild(tabCover);
-        tab.id = getChannelID(nodes[index])
-        nodes[index].style = "z-index: 1; overflow: visible;"
-        nodes[index].appendChild(tab);
-        nodes[index].insertBefore(tab, nodes[index].firstChild)
+        nodes[index].firstChild.addEventListener('mouseout', pushSub)
     }
 }
 
-function addTabListeners(nodes) {
-    nodes[0].parentElement.addEventListener('mouseout', pushTab)
-    for (index in Array.from(nodes)) {
-        nodes[index].addEventListener('mouseover', pullTab)
-        nodes[index].firstChild.addEventListener('mouseout', pushTab)
+function addTabs(container) {
+    for (x=0; x < 3; x++) {
+        tab = document.createElement("div"); tab.className = "tab";
+        container.appendChild(tab);
+        container.insertBefore(tab, container.firstChild);
+        tabNodes.push(tab)
     }
 }
 
-function pullTab(e) {
+function pullSub(e) {
     if (pulledMenu) { return }
-    if (pulledTab) {
-        pulledTab.firstChild.style.left = "0px"
-        pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px white"
+    if (pulledSub) {
+        pulledSub.firstChild.style.left = "0px"
+        pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
     }
-    pulledTab = e.currentTarget.firstChild
-    pulledTab.firstChild.style.left = "40px"
-    pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px gray"
-    pulledTab.lastChild.style.backgroundColor = "#ededed"
-    pulledTab.addEventListener('click', tabMenu)
+    pulledSub = e.currentTarget.firstChild
+    pulledSub.firstChild.style.left = "40px"
+    pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px gray"
+    pulledSub.lastChild.style.backgroundColor = "#ededed"
+    pulledSub.addEventListener('click', subMenu)
 }
 
-function pushTab(e) {
+function pushSub(e) {
     if (pulledMenu) { return }
-    if (pulledTab) {
-        pulledTab.firstChild.style.left = "0px"
-        pulledTab.lastChild.style.boxShadow = "3px 0 1px -3px white"
-        pulledTab.lastChild.style.backgroundColor = "white"
-        pulledTab.removeEventListener('click', tabMenu)
+    if (pulledSub) {
+        pulledSub.firstChild.style.left = "0px"
+        pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
+        pulledSub.lastChild.style.backgroundColor = "white"
+        pulledSub.removeEventListener('click', subMenu)
     }
     e.stopPropagation()
 }
@@ -110,16 +144,18 @@ function closeMenu(e) {
     if (e.relatedTarget.parentElement == pulledMenu) { return } // JS stupidity causes 'mouseout' to call when hovering over child elements OF THE MENU!!!
     pulledMenu.remove()
     pulledMenu = null;
-    pushTab(e)
+    pushSub(e)
 }
 
-function tabMenu(e) {
+function subMenu(e) {
+    // Click +
+    // List of subs & "Add a sub"
     if (pulledMenu) { return }
     e.stopPropagation()
-    pulledMenu = document.createElement("div"); pulledMenu.className = "tab-menu"
+    pulledMenu = document.createElement("div"); pulledMenu.className = "sub-menu"
 
     line = document.createElement("hr"); line.style = "border-top: 1px solid lightgray; width: 90%; margin: auto; padding-bottom: 5px; margin-top: 5px;";
-    menuItem = document.createElement("a"); menuItem.className = "menu-link"; menuItem.innerHTML = "ADD A TAB"
+    menuItem = document.createElement("a"); menuItem.className = "menu-link"; menuItem.innerHTML = "ADD A SUB"
     pulledMenu.appendChild(line)
     pulledMenu.appendChild(menuItem)
     e.currentTarget.appendChild(pulledMenu)
@@ -130,20 +166,33 @@ function tabMenu(e) {
     pulledMenu.style.top = difference.y + "px"
 
     pulledMenu.addEventListener('mouseout', closeMenu)
-    // alert("Boo!")
+}
 
-    // Click +
-    // List of tabs & "Add a Tab"
+function getSubs(container) {
+    newList = [];
+    nodes = container.childNodes;
+    for (index in Array.from(nodes)) {
+        // If this child is a tab, work through its children and skip the tab itself
+        if (nodes[index].className == "tab") {
+            newList.push(getSubs(nodes[index].childNodes));
+            continue;
+        }
+        newList.push(nodes[index]);
+    }
+    return newList;
 }
 
 function getChannelID(node) {
+    if (!(node.childNodes[1].href.includes("https://www.youtube.com/channel/"))) { return "" }
     return node.childNodes[1].href.replace("https://www.youtube.com/channel/", "")
 }
 
-function getAbsPosition(element) {
-    var rect = element.getBoundingClientRect();
-    return {x:rect.left,y:rect.top}
- }
+function getRandomInt(max) {
+    return Math.floor(Math.random() * Math.floor(max));
+}
+
+//function 
+
 
 // If the user browses to a different location, run it again
 // I tried so many 'proper' ways to do this, including window.onlocationchange. Sometimes you have to screw the proper ways of doing things if they simply don't work or over-complicate things
