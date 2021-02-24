@@ -8,6 +8,23 @@ var pulledSub = null
 var pulledMenu = null
 var subTabDict = {}
 var tabNodes = []
+var tabCount = 0
+
+
+
+// Get tabs (number of tabs, tab names, colors, etc)
+// Add the tabs that were found (if any)
+// Sort the subs into the tabs
+
+// When adding a tab, input its name
+// Tab gets created, sub gets added to that tab (and removed from any they are currently in)
+
+// If selecting a tab, sub gets added to that tab (and removed from any they are currently in)
+
+
+
+
+
 
 function waitForPageLoad() {
     check = setInterval(function(){
@@ -54,16 +71,10 @@ function setupSubs() {
 
     // Get the sub widgets and add our new functionality to them
     // Add tabs to the container
+    setupTabs();
     widgets = getSubs(widgetContainer);
-    addTabs(widgetContainer);
     addSubSlides(widgets);
     addSubListeners(widgets);
-}
-
-function appendChildren(parent, children) {
-    for (index in children) {
-        parent.appendChild(children[index])
-    }
 }
 
 function addSubSlides(nodes) {
@@ -83,11 +94,12 @@ function addSubSlides(nodes) {
 
         // If this subscription doesn't have a value in the subTab dictionary
         if (!(sub.id in subTabDict)) {
-            tabNum = getRandomInt(3)
-            console.log(tabNum);
+            tabNum = -1
             subTabDict[sub.id] = tabNum;
             // Set sub as child of corresponding tab
-            tabNodes[tabNum].appendChild(nodes[index]);
+            if (tabNum >= 0) {
+                tabNodes[tabNum].appendChild(nodes[index]);
+            }
         }
     }
 }
@@ -101,20 +113,25 @@ function addSubListeners(nodes) {
     }
 }
 
-function mergeSubs(nodes) {
-    for (index in Array.from(nodes)) {
-        nodes[index].firstChild.addEventListener('mouseout', pushSub)
-    }
+
+function subMenu(e) {
+    // Click +
+    // List of subs & "Add a sub"
+    if (pulledMenu) { return; }
+    e.stopPropagation();
+    pulledMenu = document.createElement("div"); pulledMenu.className = "sub-menu";
+    e.currentTarget.appendChild(pulledMenu);
+    setupTabMenu();
+
+    difference = {x:40, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2};
+    pulledMenu.style.left = difference.x + e.currentTarget.offsetWidth + "px";
+    pulledMenu.style.top = difference.y + "px";
+
+    pulledMenu.addEventListener('mouseout', closeMenu);
+    menuItem.addEventListener('click', createTab)
 }
 
-function addTabs(container) {
-    for (x=0; x < 3; x++) {
-        tab = document.createElement("div"); tab.className = "tab";
-        container.appendChild(tab);
-        container.insertBefore(tab, container.firstChild);
-        tabNodes.push(tab)
-    }
-}
+
 
 function pullSub(e) {
     if (pulledMenu) { return }
@@ -147,26 +164,21 @@ function closeMenu(e) {
     pushSub(e)
 }
 
-function subMenu(e) {
-    // Click +
-    // List of subs & "Add a sub"
-    if (pulledMenu) { return }
-    e.stopPropagation()
-    pulledMenu = document.createElement("div"); pulledMenu.className = "sub-menu"
+function createTab(e) {
+    value = prompt("Enter tab name:");
+    if (!(value)) { return; }
 
-    line = document.createElement("hr"); line.style = "border-top: 1px solid lightgray; width: 90%; margin: auto; padding-bottom: 5px; margin-top: 5px;";
-    menuItem = document.createElement("a"); menuItem.className = "menu-link"; menuItem.innerHTML = "ADD A SUB"
-    pulledMenu.appendChild(line)
-    pulledMenu.appendChild(menuItem)
-    e.currentTarget.appendChild(pulledMenu)
-
-    difference = {x:40, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2}
-
-    pulledMenu.style.left = difference.x + e.currentTarget.offsetWidth + "px"
-    pulledMenu.style.top = difference.y + "px"
-
-    pulledMenu.addEventListener('mouseout', closeMenu)
+    tab = document.createElement("div"); tab.className = "tab"; tab.id = value;
+    widgetContainer.appendChild(tab);
+    if (tabNodes.length>0) {
+        insertAfter(tabNodes[tabNodes.length-1], tab);
+    } else {
+        widgetContainer.insertBefore(tab, widgetContainer.firstChild);
+    }
+    tabNodes.push(tab)
 }
+
+
 
 function getSubs(container) {
     newList = [];
@@ -182,6 +194,34 @@ function getSubs(container) {
     return newList;
 }
 
+function setupTabMenu() {
+    for (tab in tabNodes) {
+        menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = tabNodes[tab].id.toUpperCase();
+        pulledMenu.appendChild(menuItem);
+    }
+
+    line = document.createElement("hr"); line.style = "border-top: 1px solid lightgray; width: 90%; margin: auto; padding-bottom: 5px; margin-top: 5px;";
+    menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = "ADD A SUB";
+    pulledMenu.appendChild(line); pulledMenu.appendChild(menuItem);
+}
+
+function setupTabs() {
+    // tabCount = localStorage.getItem("tabCount");
+    // Use JSON.stringify to encode lists to localStorage and decode them
+    if (!(tabCount)) {
+        tabCount = 0;
+        return;
+    }
+
+
+    for (x=0; x < 3; x++) {
+        tab = document.createElement("div"); tab.className = "tab";
+        container.appendChild(tab);
+        container.insertBefore(tab, container.firstChild);
+        tabNodes.push(tab)
+    }
+}
+
 function getChannelID(node) {
     if (!(node.childNodes[1].href.includes("https://www.youtube.com/channel/"))) { return "" }
     return node.childNodes[1].href.replace("https://www.youtube.com/channel/", "")
@@ -191,7 +231,16 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max));
 }
 
-//function 
+function appendChildren(parent, children) {
+    for (index in children) {
+        parent.appendChild(children[index])
+    }
+}
+
+// Raw JS InsertAfter code from StackOverflow. StackOverflow FTW!
+function insertAfter(referenceNode, newNode) {
+    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+}
 
 
 // If the user browses to a different location, run it again

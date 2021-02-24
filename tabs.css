@@ -2,8 +2,8 @@
     position: relative;
     width: 100%;
 
-    padding-top: 10px;
-    border: 10px solid firebrick;
+    padding-top: 10px; padding-bottom: 10px;
+    border: 6px solid firebrick;
     border-bottom-width: 0px;
     border-right: hidden;
     box-sizing: border-box;
@@ -57,7 +57,6 @@
     left: 0;
     
     z-index: 1;
-    justify-content: center;
     text-align: center;
     overflow-x: hidden;
 
@@ -69,10 +68,11 @@
 
 .menu-link {
     position: relative;
+    width: calc(100% - 10px);
     font-size: 11px;
     font-weight: 500;
     padding: 5px;
-    height: fit-content;
+    word-break: break-all;
 } .menu-link:hover {
     text-decoration: underline;
     cursor: pointer;
