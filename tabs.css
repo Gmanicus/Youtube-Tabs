@@ -60,6 +60,7 @@
     text-align: center;
     overflow-x: hidden;
 
+    padding-top: 5px;
     background-color: white;
     box-sizing: border-box;
     border: solid 1px #ddd;
