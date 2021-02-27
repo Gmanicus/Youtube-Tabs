@@ -8,7 +8,7 @@
       "matches": [
         "https://www.youtube.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["content.js", "iro.min.js"],
       "css": ["tabs.css"]
     }
   ],

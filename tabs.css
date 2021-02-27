@@ -1,5 +1,6 @@
 .tab {
     position: relative;
+    height: fit-content;
     width: 100%;
 
     padding-top: 10px; padding-bottom: 10px;
@@ -7,6 +8,39 @@
     border-bottom-width: 0px;
     border-right: hidden;
     box-sizing: border-box;
+    /* transition: height 0.3s ease-in-out; */
+}
+
+.tab-menu {
+    display: flex;
+    width: 100%;
+    padding-left: 10px;
+    align-items: center;
+} .tab-menu-edit {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin: 5px;
+    background-image: url("https://i.imgur.com/HyiPKvs.png");
+    background-size: contain;
+} .tab-menu-edit:hover {
+    filter: contrast(100);
+    cursor: pointer;
+} .tab-menu-delete {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin: 5px;
+    background-image: url("https://i.imgur.com/zSqjPhr.png");
+    background-size: contain;
+} .tab-menu-delete:hover {
+    filter: contrast(100);
+    cursor: pointer;
+} .tab-menu-name {
+    display: inline-block;
+    margin: 10px;
+    color: #444;
+    font-weight: lighter;
 }
 
 .sub {
@@ -45,7 +79,7 @@
     height: 20px;
     margin: 10px;
     float: right;
-    background-image: url("https://i.imgur.com/0x9oifS.png");
+    background-image: url("https://i.imgur.com/RfJCiU9.png");
     background-size: contain;
 }
 
@@ -71,12 +105,41 @@
     position: relative;
     width: calc(100% - 10px);
     font-size: 11px;
+    color: #444;
     font-weight: 500;
     padding: 5px;
     word-break: break-all;
 } .menu-link:hover {
     text-decoration: underline;
     cursor: pointer;
+}
+
+.create-tab-menu {
+    position: absolute;
+    width: 150px;
+    height: 160px;
+    top: 0px;
+    left: 0px;
+
+    z-index: 1;
+    padding: 5px;
+    background-color: white;
+    box-sizing: border-box;
+    border: solid 1px #ddd;
+    border-radius: 2px;
+}
+
+#create-tab-name {
+    width: calc(100% - 10px);
+}
+
+.create-tab-btn {
+    width: calc(50% - 3px);
+    margin: auto;
+    margin-top: 5px;
+
+    border: solid 1px #ddd;
+    border-radius: 2px;
 }
 
 ::-webkit-scrollbar {

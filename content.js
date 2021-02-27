@@ -1,14 +1,15 @@
 // Developed by Grant @ GeekOverdriveStudio
 var currentURL = "";
-var scrollDist = 0
-var guide = document.getElementById("guide-content")
-var innerGuide = document.getElementById("guide-inner-content")
-var widgetContainer = null
-var pulledSub = null
-var pulledMenu = null
-var tabNodes = []
-var subLinkDict = {}
-var subTabDict = {}
+var scrollDist = 0;
+var guide = document.getElementById("guide-content");
+var innerGuide = document.getElementById("guide-inner-content");
+var widgetContainer = null;
+var pulledSub = null;
+var pulledMenu = null;
+var colorPicker = null;
+var tabNodes = [];
+var subLinkDict = {};
+var subTabDict = {};
 
 
 function waitForPageLoad() {
@@ -17,6 +18,11 @@ function waitForPageLoad() {
         if (document.getElementById("sections")) {
             clearInterval(check);
             console.log("Got Sections...");
+
+            // Include the Iro.JS color picker library
+            iroEle = document.createElement("script"); iroEle.src = "https://cdn.jsdelivr.net/npm/@jaames/iro@5";
+            document.getElementsByTagName("head")[0].appendChild(iroEle);
+
             // Sections > Subscription Renderer > Subscription List
             // Get "Show # More" button (<a> element)
             // Click it
@@ -104,6 +110,7 @@ function addSubListeners(nodes) {
 }
 
 
+
 function subMenu(e) {
     // Click +
     // List of subs & "Add a sub"
@@ -111,13 +118,57 @@ function subMenu(e) {
     e.stopPropagation();
     pulledMenu = document.createElement("div"); pulledMenu.className = "sub-menu";
     e.currentTarget.appendChild(pulledMenu);
-    setupTabMenu();
+    setupSubMenu();
 
-    difference = {x:40, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2};
+    difference = {x:0, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2};
     pulledMenu.style.left = difference.x + e.currentTarget.offsetWidth + "px";
     pulledMenu.style.top = difference.y + "px";
 
     pulledMenu.addEventListener('mouseout', closeMenu);
+    pushSub(e);
+}
+
+function tabMenu(e) {
+    e.stopPropagation();
+    value = "test";
+    // value = prompt("Enter tab name:");
+    // if (!(value)) { return; }
+
+    // Create tab-menu containers
+    let colorMenu = document.createElement("div"); colorMenu.className = "create-tab-menu";
+    let colorDiv = document.createElement("div"); colorDiv.id = "color-picker";
+    colorMenu.appendChild(colorDiv);
+    pulledSub.appendChild(colorMenu);
+
+    // Add Color Picker UI
+    colorPicker = new window.iro.ColorPicker("#color-picker", {
+        width: 100,
+        sliderSize: 15,
+        layoutDirection: "horizontal",
+        borderWidth: 2,
+        borderColor: "#ddd"
+    });
+
+    difference = {x:0, y:-colorMenu.offsetHeight/2 + pulledSub.offsetHeight/2};
+    colorMenu.style.left = difference.x + pulledSub.offsetWidth + "px";
+    colorMenu.style.top = difference.y + "px";
+
+    // Add Tab Menu UI
+    let name = document.createElement("input"); name.id = "create-tab-name"; name.placeholder = "Tab Name";
+    let cancel = document.createElement("button"); cancel.className = "create-tab-btn"; cancel.innerHTML = "Cancel"; cancel.style = "margin-right: 5px; background-color: black; color: #fefefe;";
+    let confirm = document.createElement("button"); confirm.className = "create-tab-btn"; confirm.innerHTML = "Confirm"; confirm.style = "background-color: white;";
+
+    colorMenu.appendChild(name);
+    colorMenu.appendChild(cancel);
+    colorMenu.appendChild(confirm);
+
+    name.addEventListener('click', interruptClick); // Stop click from causing a redirect to channel page
+    cancel.addEventListener('click', closeMenu);
+    confirm.addEventListener('click', createTab);
+
+    // Replace menu with create tab menu
+    pulledMenu.remove();
+    pulledMenu = colorMenu;
 }
 
 
@@ -137,7 +188,6 @@ function pullSub(e) {
 
 function pushSub(e) {
     e.stopPropagation()
-    if (pulledMenu) { return }
     if (pulledSub) {
         pulledSub.firstChild.style.left = "0px"
         pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
@@ -147,45 +197,61 @@ function pushSub(e) {
 }
 
 function closeMenu(e) {
-    if (e.relatedTarget.parentElement == pulledMenu || e.relatedTarget == pulledMenu) { return } // JS stupidity causes 'mouseout' to call when hovering over child elements OF THE MENU!!!
-    pulledMenu.remove()
+    e.stopPropagation();
+    if (e.relatedTarget && (e.relatedTarget.parentElement == pulledMenu || e.relatedTarget == pulledMenu)) { return } // JS stupidity causes 'mouseout' to call when hovering over child elements OF THE MENU!!!
+    pulledMenu.remove();
     pulledMenu = null;
-    pushSub(e)
+}
+
+function moveSubToTab(e, id) {
+    let tabId = 0;
+    if (id) { tabId = id; }
+    else {
+        e.stopPropagation();
+        tabId = parseInt(e.target.id);
+    }
+
+    console.log(tabId);
+    tabNodes[tabId].appendChild(pulledSub.parentElement);
+    subLinkDict[pulledSub.id] = parseInt(tabId);
+    saveData();
 }
 
 function createTab(e) {
     e.stopPropagation();
-    value = prompt("Enter tab name:");
-    if (!(value)) { return; }
 
-    tab = document.createElement("div"); tab.className = "tab"; tab.title = value;
-    widgetContainer.appendChild(tab);
-    if (tabNodes.length>0) {
-        insertAfter(tabNodes[tabNodes.length-1], tab);
-    } else {
-        widgetContainer.insertBefore(tab, widgetContainer.firstChild);
-    }
+    let tabName = document.getElementById("create-tab-name").value;
+    let tabColor = colorPicker.color.hexString;
+
+    let tab = generateTab(tabName, tabColor);
     tab.appendChild(pulledSub.parentElement);
-    subLinkDict[pulledSub.id] = parseInt(tabNodes.length); 
+    // moveSubToTab(null, tabNodes.length-1);
+    // subLinkDict[pulledSub.id] = parseInt(tabNodes.length-1);
+    // subTabDict[tabNodes.length-1] = tab.title;
+    // saveData();
 
-    tabNodes.push(tab)
-    subTabDict[tabNodes.length-1] = tab.title;
-    console.log(subTabDict);
-    saveData();
+    
 }
 
-function moveSubToTab(e) {
+function editTab(e) {
     e.stopPropagation();
-    console.log(e.target.id);
-    tabNodes[e.target.id].appendChild(pulledSub.parentElement);
-    subLinkDict[pulledSub.id] = parseInt(e.target.id);
-    saveData();
+    console.log("EDIT: " + e.target.parentElement.parentElement.title);
+}
+
+function deleteTab(e) {
+    e.stopPropagation();
+    console.log("DELETE: " + e.target.parentElement.parentElement.title);
+}
+
+function interruptClick(e) {
+    e.stopPropagation();
+    console.log("INTERVENTION!!!");
 }
 
 
 
 
-function setupTabMenu() {
+function setupSubMenu() {
     for (tab in tabNodes) {
         menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = tabNodes[tab].title.toUpperCase(); menuItem.id = tab;
         menuItem.addEventListener('click', moveSubToTab);
@@ -194,7 +260,7 @@ function setupTabMenu() {
     
     line = document.createElement("hr"); line.style = "border-top: 1px solid lightgray; width: 90%; margin: auto; padding-bottom: 5px; margin-top: 5px;";
     menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = "ADD A SUB";
-    menuItem.addEventListener('click', createTab);
+    menuItem.addEventListener('click', tabMenu);
     pulledMenu.appendChild(line); pulledMenu.appendChild(menuItem);
 }
 
@@ -205,13 +271,36 @@ function setupTabs() {
         return;
     }
     
-    console.log(subTabDict);
     for (key in subTabDict) {
-        tab = document.createElement("div"); tab.className = "tab"; tab.title = subTabDict[key];
-        widgetContainer.appendChild(tab);
-        widgetContainer.insertBefore(tab, widgetContainer.firstChild);
-        tabNodes.push(tab)
+        generateTab(subTabDict[key]);
     }
+}
+
+function generateTab(name, color) {
+    console.log(color);
+    let tab = document.createElement("div"); tab.className = "tab"; tab.title = name; tab.style.borderColor = color;
+    let tabHeader = document.createElement("div"); tabHeader.className = "tab-menu";
+    let tabHeaderEdit = document.createElement("div"); tabHeaderEdit.className = "tab-menu-edit"; tabHeaderEdit.title = "Edit";
+    let tabHeaderDelete = document.createElement("div"); tabHeaderDelete.className = "tab-menu-delete"; tabHeaderDelete.title = "Delete";
+    let tabHeaderName = document.createElement("h3"); tabHeaderName.innerHTML = name.toUpperCase(); tabHeaderName.className = "tab-menu-name";
+
+    tabHeaderDelete.addEventListener('click', deleteTab);
+    tabHeaderEdit.addEventListener('click', editTab);
+
+    tabHeader.appendChild(tabHeaderDelete);
+    tabHeader.appendChild(tabHeaderEdit);
+    tabHeader.appendChild(tabHeaderName);
+    tab.appendChild(tabHeader);
+    widgetContainer.appendChild(tab);
+    
+    if (tabNodes.length > 0) {
+        insertAfter(tabNodes[tabNodes.length-1], tab);
+    } else {
+        widgetContainer.insertBefore(tab, widgetContainer.firstChild);
+    }
+    
+    tabNodes.push(tab);
+    return tab;
 }
 
 
@@ -232,10 +321,12 @@ function getSubs(container) {
             add = getSubs(nodes[index]);
             if (add) { newList.push(add); }
             continue;
+        } else if (nodes[index].className == "tab-menu") {
+            continue;
         }
         newList.push(nodes[index]);
     }
-    console.log(newList);
+    if (newList.length < 1) { return null; }
     return newList;
 }
 
