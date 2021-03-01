@@ -1,12 +1,15 @@
 // Developed by Grant @ GeekOverdriveStudio
+var hexDigits = new Array("0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"); 
 var currentURL = "";
 var scrollDist = 0;
+
 var guide = document.getElementById("guide-content");
 var innerGuide = document.getElementById("guide-inner-content");
 var widgetContainer = null;
 var pulledSub = null;
 var pulledMenu = null;
 var colorPicker = null;
+
 var tabNodes = [];
 var subLinkDict = {};
 var subTabDict = {};
@@ -16,55 +19,62 @@ function waitForPageLoad() {
     check = setInterval(function(){
         if (document.getElementsByClassName("tab").length > 0) { return; }
         if (document.getElementById("sections")) {
-            clearInterval(check);
-            console.log("Got Sections...");
-
-            // Include the Iro.JS color picker library
-            iroEle = document.createElement("script"); iroEle.src = "https://cdn.jsdelivr.net/npm/@jaames/iro@5";
-            document.getElementsByTagName("head")[0].appendChild(iroEle);
-
+            console.log("[Youtube Tabs] Got Sections...");
+            
             // Sections > Subscription Renderer > Subscription List
             // Get "Show # More" button (<a> element)
             // Click it
+
+            // 'sections' sometimes errors out here, saying it can't get childnodes of undefined.
+            // Considering that this is inside an if block checking that that is NOT the case, I am not even going to try to fix this
             subList = document.getElementById("sections").childNodes[1].childNodes[3];
             expandBtn = subList.childNodes[subList.childNodes.length-1].childNodes[1].childNodes[1];
             expandBtn.click();
-
+            
+            clearInterval(check);
             setupSubs();
         }
     }, 100);
 }
 
 function setupSubs() {
-    console.log("Youtube Sub Tabs")
+    console.log("[Youtube Tabs] LOADED")
 
     // Allow overflow to make subs visible
-    guide.style.overflow = "visible"
-    innerGuide.style.overflow = "visible"
-    innerGuide.style.transition = "all 0.05s ease-out"
+    guide.style.overflow = "visible";
+    innerGuide.style.overflow = "visible";
+    innerGuide.style.transition = "all 0.05s ease-out";
     innerGuide.addEventListener("wheel", function(e) {
         if (pulledMenu) { return }
-        scrollDist -= e.deltaY
-        scrollDist = Math.min(Math.max(scrollDist, -innerGuide.offsetHeight + window.innerHeight), 0)
+        scrollDist -= e.deltaY;
+        scrollDist = Math.min(Math.max(scrollDist, -innerGuide.offsetHeight + window.innerHeight), 0);
         innerGuide.style.marginTop = scrollDist + "px";
     })
     // Get the sub widget container
-    widgetContainer = document.querySelectorAll('[id=items]')[1]
-    widgetContainer.style.position = "relative"
+    widgetContainer = document.querySelectorAll('[id=items]')[1];
+    widgetContainer.style.position = "relative";
     // Get the "show more" widget, reposition the subs from within it to the container, and delete the expandable widget
-    expandableWidget = widgetContainer.childNodes[widgetContainer.childNodes.length-1]
-    appendChildren(widgetContainer, Array.from(expandableWidget.childNodes[3].childNodes[1].childNodes))
-    expandableWidget.remove()
+    expandableWidget = widgetContainer.childNodes[widgetContainer.childNodes.length-1];
+    appendChildren(widgetContainer, Array.from(expandableWidget.childNodes[3].childNodes[1].childNodes));
+    expandableWidget.remove();
 
     // Get saved data
     subLinkDict = JSON.parse(localStorage.getItem("subscription_links"));
     if (!(subLinkDict)) { subLinkDict = {}; }
-    console.log(subLinkDict);
 
     // Get the sub widgets and add our new functionality to them
     // Add tabs to the container
     setupTabs();
-    widgets = getSubs(widgetContainer);
+    updateSubs();
+
+    // Check and update any new subs to add tab functionality
+    setInterval(function(){
+        updateSubs(true);
+    }, 1000);
+}
+
+function updateSubs(filter) {
+    widgets = getSubs(widgetContainer, filter);
     addSubSlides(widgets);
     addSubListeners(widgets);
 }
@@ -87,8 +97,8 @@ function addSubSlides(nodes) {
         // If this subscription doesn't have a value in the subTab dictionary
         if (!(sub.id in subLinkDict)) {
             subLinkDict[sub.id] = -1;
-        } else {
-            tabNum = parseInt(subLinkDict[sub.id]);
+        } else if (subLinkDict[sub.id] != -1) {
+            tabNum = subTabDict[ subLinkDict[sub.id] ].index;
             // Set sub as child of corresponding tab
             if (tabNum >= 0 && tabNodes[tabNum]) {
                 tabNodes[tabNum].appendChild(nodes[index]);
@@ -97,7 +107,7 @@ function addSubSlides(nodes) {
             }
         }
     }
-    saveData();
+    if (nodes) { saveData(); }
 }
 
 function addSubListeners(nodes) {
@@ -128,17 +138,18 @@ function subMenu(e) {
     pushSub(e);
 }
 
-function tabMenu(e) {
+function tabMenu(e, edit) {
     e.stopPropagation();
-    value = "test";
-    // value = prompt("Enter tab name:");
-    // if (!(value)) { return; }
+    let container = pulledSub;
+    if (edit) { container = edit; }
 
     // Create tab-menu containers
     let colorMenu = document.createElement("div"); colorMenu.className = "create-tab-menu";
     let colorDiv = document.createElement("div"); colorDiv.id = "color-picker";
+    let credit = document.createElement("p"); credit.style = "position: absolute; z-index: 1; color: #555; font-size: 7px;"; credit.innerHTML = "IRO.JS"
+    colorMenu.appendChild(credit);
     colorMenu.appendChild(colorDiv);
-    pulledSub.appendChild(colorMenu);
+    container.appendChild(colorMenu);
 
     // Add Color Picker UI
     colorPicker = new window.iro.ColorPicker("#color-picker", {
@@ -149,14 +160,20 @@ function tabMenu(e) {
         borderColor: "#ddd"
     });
 
-    difference = {x:0, y:-colorMenu.offsetHeight/2 + pulledSub.offsetHeight/2};
-    colorMenu.style.left = difference.x + pulledSub.offsetWidth + "px";
+    let difference = {};
+    if (!edit) {
+        difference = {x:0, y:-colorMenu.offsetHeight/2 + container.offsetHeight/2};
+    } else {
+        difference = {x:-5, y:-colorMenu.offsetHeight/2 + 20};
+    }
+    colorMenu.style.left = difference.x + container.offsetWidth + "px";
     colorMenu.style.top = difference.y + "px";
 
     // Add Tab Menu UI
     let name = document.createElement("input"); name.id = "create-tab-name"; name.placeholder = "Tab Name";
     let cancel = document.createElement("button"); cancel.className = "create-tab-btn"; cancel.innerHTML = "Cancel"; cancel.style = "margin-right: 5px; background-color: black; color: #fefefe;";
     let confirm = document.createElement("button"); confirm.className = "create-tab-btn"; confirm.innerHTML = "Confirm"; confirm.style = "background-color: white;";
+    if (edit) { name.value = edit.title; }
 
     colorMenu.appendChild(name);
     colorMenu.appendChild(cancel);
@@ -164,10 +181,12 @@ function tabMenu(e) {
 
     name.addEventListener('click', interruptClick); // Stop click from causing a redirect to channel page
     cancel.addEventListener('click', closeMenu);
-    confirm.addEventListener('click', createTab);
+    if (!edit) { confirm.addEventListener('click', createTab); }
+    else { confirm.addEventListener('click', editTab); }
+
 
     // Replace menu with create tab menu
-    pulledMenu.remove();
+    if (pulledMenu) { pulledMenu.remove(); }
     pulledMenu = colorMenu;
 }
 
@@ -197,8 +216,9 @@ function pushSub(e) {
 }
 
 function closeMenu(e) {
-    e.stopPropagation();
-    if (e.relatedTarget && (e.relatedTarget.parentElement == pulledMenu || e.relatedTarget == pulledMenu)) { return } // JS stupidity causes 'mouseout' to call when hovering over child elements OF THE MENU!!!
+    if (e) { e.stopPropagation(); }
+    if (!pulledMenu) { return; }
+    if (e && e.relatedTarget && (e.relatedTarget.parentElement == pulledMenu || e.relatedTarget == pulledMenu)) { return } // JS stupidity causes 'mouseout' to call when hovering over child elements OF THE MENU!!!
     pulledMenu.remove();
     pulledMenu = null;
 }
@@ -211,9 +231,13 @@ function moveSubToTab(e, id) {
         tabId = parseInt(e.target.id);
     }
 
-    console.log(tabId);
-    tabNodes[tabId].appendChild(pulledSub.parentElement);
-    subLinkDict[pulledSub.id] = parseInt(tabId);
+    if (tabId != -1) {
+        tabNodes[ subTabDict[tabId].index ].appendChild(pulledSub.parentElement);
+    } else {
+        widgetContainer.appendChild(pulledSub.parentElement);
+    }
+
+    subLinkDict[pulledSub.id] = tabId;
     saveData();
 }
 
@@ -223,29 +247,95 @@ function createTab(e) {
     let tabName = document.getElementById("create-tab-name").value;
     let tabColor = colorPicker.color.hexString;
 
-    let tab = generateTab(tabName, tabColor);
-    tab.appendChild(pulledSub.parentElement);
-    // moveSubToTab(null, tabNodes.length-1);
-    // subLinkDict[pulledSub.id] = parseInt(tabNodes.length-1);
-    // subTabDict[tabNodes.length-1] = tab.title;
-    // saveData();
+    // If the user didn't set a name, mark the input field
+    if (tabName == "") {
+        document.getElementById("create-tab-name").style.borderColor = "red";
+        return;
+    } else {
+        closeMenu(e);
+    }
 
+    let tab = generateTab(tabName, new Date().getTime(), tabColor);
+
+    subLinkDict[pulledSub.id] = parseInt(tab.id);
+    subTabDict[ parseInt(tab.id) ] = {
+        name: tab.title,
+        index: tabNodes.length-1,
+        color: convertColor(tab.style.borderColor)
+    };
     
+    moveSubToTab(null, parseInt(tab.id));
+    saveData();
 }
 
 function editTab(e) {
     e.stopPropagation();
-    console.log("EDIT: " + e.target.parentElement.parentElement.title);
+    let tab = e.target.parentElement.parentElement;
+    if (e.target.className == "create-tab-btn") {
+        let tabName = document.getElementById("create-tab-name").value;
+
+        if (tabName == "") {
+            document.getElementById("create-tab-name").style.borderColor = "red";
+            return;
+        }
+        console.log("[Youtube Tabs] EDIT CONFIRMED");
+
+        // Edit values in save data
+        let subTab = subTabDict[ parseInt(tab.id) ];
+        subTab.name = tabName;
+        subTab.color = colorPicker.color.hexString;
+
+        // Edit values in elements
+        tab.title = tabName;
+        tab.childNodes[0].childNodes[2].innerHTML = tabName.toUpperCase();
+        tab.style.borderColor = colorPicker.color.hexString;
+
+        // SAVE DATA
+        closeMenu();
+        saveData();
+    } else {
+        console.log("[Youtube Tabs] EDITING: " + tab.title);
+        tabMenu(e, tab);
+        colorPicker.color.hexString = convertColor(tab.style.borderColor);
+    }
 }
 
 function deleteTab(e) {
     e.stopPropagation();
-    console.log("DELETE: " + e.target.parentElement.parentElement.title);
+    let tab = e.target.parentElement.parentElement;
+    console.log("[Youtube Tabs] DELETING: " + tab.title);
+    let confirmed = confirm(`Are you sure you want to delete '${tab.title}'?`)
+    if (confirmed) {
+        console.log("[Youtube Tabs] DELETE CONFIRMED");
+
+        // Edit values in save data
+        // Update higher tabs' indexes
+        for (key in subTabDict) {
+            if (subTabDict[key].index > subTabDict[parseInt(tab.id)].index) {
+                subTabDict[key].index--;
+            }
+        }
+
+        // Update child subs
+        for (key in subLinkDict) {
+            if (subLinkDict[key] == parseInt(tab.id)) {
+                subTabDict[key] = -1;
+            }
+        }
+
+        // Remove from lists
+        tabNodes.splice(subTabDict[parseInt(tab.id)].index, 1)
+        delete subTabDict[parseInt(tab.id)];
+
+        // Edit values in elements
+        appendChildren(widgetContainer, getSubs(tab));
+        tab.remove();
+        saveData();
+    }
 }
 
 function interruptClick(e) {
     e.stopPropagation();
-    console.log("INTERVENTION!!!");
 }
 
 
@@ -253,15 +343,25 @@ function interruptClick(e) {
 
 function setupSubMenu() {
     for (tab in tabNodes) {
-        menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = tabNodes[tab].title.toUpperCase(); menuItem.id = tab;
+        menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = tabNodes[tab].title.toUpperCase(); menuItem.id = tabNodes[tab].id;
         menuItem.addEventListener('click', moveSubToTab);
         pulledMenu.appendChild(menuItem);
     }
     
     line = document.createElement("hr"); line.style = "border-top: 1px solid lightgray; width: 90%; margin: auto; padding-bottom: 5px; margin-top: 5px;";
-    menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = "ADD A SUB";
-    menuItem.addEventListener('click', tabMenu);
-    pulledMenu.appendChild(line); pulledMenu.appendChild(menuItem);
+    addTab = document.createElement("div"); addTab.className = "menu-link"; addTab.innerHTML = "ADD A TAB";
+    addTab.addEventListener('click', tabMenu);
+    
+    pulledMenu.appendChild(line);
+    pulledMenu.appendChild(addTab);
+
+    // If this sub is already in a tab...
+    if (subLinkDict[pulledSub.id] != -1) {
+        removeFromTab = document.createElement("div"); removeFromTab.className = "menu-link"; removeFromTab.id = -1; removeFromTab.innerHTML = "REMOVE FROM TAB";
+        removeFromTab.addEventListener('click', moveSubToTab);
+        pulledMenu.appendChild(removeFromTab);
+    }
+
 }
 
 function setupTabs() {
@@ -272,13 +372,12 @@ function setupTabs() {
     }
     
     for (key in subTabDict) {
-        generateTab(subTabDict[key]);
+        generateTab(subTabDict[key].name, key, subTabDict[key].color);
     }
 }
 
-function generateTab(name, color) {
-    console.log(color);
-    let tab = document.createElement("div"); tab.className = "tab"; tab.title = name; tab.style.borderColor = color;
+function generateTab(name, id, color) {
+    let tab = document.createElement("div"); tab.className = "tab"; tab.title = name; tab.id = id; tab.style.borderColor = color;
     let tabHeader = document.createElement("div"); tabHeader.className = "tab-menu";
     let tabHeaderEdit = document.createElement("div"); tabHeaderEdit.className = "tab-menu-edit"; tabHeaderEdit.title = "Edit";
     let tabHeaderDelete = document.createElement("div"); tabHeaderDelete.className = "tab-menu-delete"; tabHeaderDelete.title = "Delete";
@@ -310,7 +409,7 @@ function saveData() {
     localStorage.setItem("subscription_tabs", JSON.stringify(subTabDict));
 }
 
-function getSubs(container) {
+function getSubs(container, filterNew) {
     let newList = [];
     let nodes = Array.from(container.childNodes);
     // nodes.length = 0 if the container is empty, but not actually........... What the frick.
@@ -318,11 +417,20 @@ function getSubs(container) {
     for (index in nodes) {
         // If this child is a tab, work through its children and skip the tab itself
         if (nodes[index].className == "tab") {
-            add = getSubs(nodes[index]);
+            add = getSubs(nodes[index], filterNew);
             if (add) { newList.push(add); }
             continue;
         } else if (nodes[index].className == "tab-menu") {
             continue;
+        } else if (nodes[index].className == "create-tab-menu") {
+            continue;
+        }
+
+        // If we want to filter out subs that already have the tab elements...
+        if (filterNew) {
+            if (nodes[index].firstChild.className == "sub") {
+                continue
+            }
         }
         newList.push(nodes[index]);
     }
@@ -337,6 +445,36 @@ function getChannelID(node) {
 
 function getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max));
+}
+
+// Convert color from name or RGB string to hex value
+function convertColor(color) { 
+    var colors = { 
+        "aliceblue":"#f0f8ff", "antiquewhite":"#faebd7", "aqua":"#00ffff", "aquamarine":"#7fffd4", "azure":"#f0ffff",  "beige":"#f5f5dc", "bisque":"#ffe4c4", "black":"#000000", "blanchedalmond":"#ffebcd", "blue":"#0000ff", "blueviolet":"#8a2be2", "brown":"#a52a2a", "burlywood":"#deb887",  "cadetblue":"#5f9ea0", "chartreuse":"#7fff00", "chocolate":"#d2691e", "coral":"#ff7f50", "cornflowerblue":"#6495ed", "cornsilk":"#fff8dc", "crimson":"#dc143c", "cyan":"#00ffff",  "darkblue":"#00008b", "darkcyan":"#008b8b", "darkgoldenrod":"#b8860b", "darkgray":"#a9a9a9", "darkgreen":"#006400", "darkkhaki":"#bdb76b", "darkmagenta":"#8b008b", "darkolivegreen":"#556b2f",  "darkorange":"#ff8c00", "darkorchid":"#9932cc", "darkred":"#8b0000", "darksalmon":"#e9967a", "darkseagreen":"#8fbc8f", "darkslateblue":"#483d8b", "darkslategray":"#2f4f4f", "darkturquoise":"#00ced1",  "darkviolet":"#9400d3", "deeppink":"#ff1493", "deepskyblue":"#00bfff", "dimgray":"#696969", "dodgerblue":"#1e90ff",  "firebrick":"#b22222", "floralwhite":"#fffaf0", "forestgreen":"#228b22", "fuchsia":"#ff00ff",  "gainsboro":"#dcdcdc", "ghostwhite":"#f8f8ff", "gold":"#ffd700", "goldenrod":"#daa520", "gray":"#808080", "green":"#008000", "greenyellow":"#adff2f", 
+        "honeydew":"#f0fff0", "hotpink":"#ff69b4", "indianred ":"#cd5c5c", "indigo":"#4b0082", "ivory":"#fffff0", "khaki":"#f0e68c",  "lavender":"#e6e6fa", "lavenderblush":"#fff0f5", "lawngreen":"#7cfc00", "lemonchiffon":"#fffacd", "lightblue":"#add8e6", "lightcoral":"#f08080", "lightcyan":"#e0ffff", "lightgoldenrodyellow":"#fafad2",  "lightgrey":"#d3d3d3", "lightgreen":"#90ee90", "lightpink":"#ffb6c1", "lightsalmon":"#ffa07a", "lightseagreen":"#20b2aa", "lightskyblue":"#87cefa", "lightslategray":"#778899", "lightsteelblue":"#b0c4de",  "lightyellow":"#ffffe0", "lime":"#00ff00", "limegreen":"#32cd32", "linen":"#faf0e6",  "magenta":"#ff00ff", "maroon":"#800000", "mediumaquamarine":"#66cdaa", "mediumblue":"#0000cd", "mediumorchid":"#ba55d3", "mediumpurple":"#9370d8", "mediumseagreen":"#3cb371", "mediumslateblue":"#7b68ee",        "mediumspringgreen":"#00fa9a", "mediumturquoise":"#48d1cc", "mediumvioletred":"#c71585", "midnightblue":"#191970", "mintcream":"#f5fffa", "mistyrose":"#ffe4e1", "moccasin":"#ffe4b5", "navajowhite":"#ffdead", "navy":"#000080",  "oldlace":"#fdf5e6", "olive":"#808000", "olivedrab":"#6b8e23", "orange":"#ffa500", "orangered":"#ff4500", "orchid":"#da70d6",  "palegoldenrod":"#eee8aa", 
+        "palegreen":"#98fb98", "paleturquoise":"#afeeee", "palevioletred":"#d87093", "papayawhip":"#ffefd5", "peachpuff":"#ffdab9", "peru":"#cd853f", "pink":"#ffc0cb", "plum":"#dda0dd", "powderblue":"#b0e0e6", "purple":"#800080",  "rebeccapurple":"#663399", "red":"#ff0000", "rosybrown":"#bc8f8f", "royalblue":"#4169e1",  "saddlebrown":"#8b4513", "salmon":"#fa8072", "sandybrown":"#f4a460", "seagreen":"#2e8b57", "seashell":"#fff5ee", "sienna":"#a0522d", "silver":"#c0c0c0", "skyblue":"#87ceeb", "slateblue":"#6a5acd", "slategray":"#708090", "snow":"#fffafa", "springgreen":"#00ff7f", "steelblue":"#4682b4",   "tan":"#d2b48c", "teal":"#008080", "thistle":"#d8bfd8", "tomato":"#ff6347", "turquoise":"#40e0d0", "violet":"#ee82ee",   "wheat":"#f5deb3", "white":"#ffffff", "whitesmoke":"#f5f5f5", "yellow":"#ffff00", "yellowgreen":"#9acd32" 
+    };
+
+    if (color == "") {
+        return colors["firebrick"];
+    }
+          
+    if (typeof colors[color.toLowerCase()] != 'undefined') 
+        return colors[color.toLowerCase()];
+    else {
+        return rgb2hex(color);
+    }
+    return false; 
+}
+
+//Function to convert rgb color to hex format
+function rgb2hex(rgb) {
+    rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
+}
+
+function hex(x) {
+    return isNaN(x) ? "00" : hexDigits[(x - x % 16) / 16] + hexDigits[x % 16];
 }
 
 function appendChildren(parent, children) {
