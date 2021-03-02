@@ -3,7 +3,12 @@ A browser extension that builds tab functionality to easily manage your subscrip
 
 ![](icon.png)
 
-Currently being reviewed for the Chrome webstore. The download link will be posted here when available. As an alternative, clone the repo and load it as an unpacked extension via your ://extensions page.
+[Chrome Webstore Download](https://chrome.google.com/webstore/detail/subscription-folders-for/jfdifkfmidcljpedkckpampdeffhlfhn)
+
+As an alternative to adding the extension via the Chrome webstore, clone the repo and load it as an unpacked extension via your ://extensions page.
+
+#### Tested and working on Chromium-based browsers (Chrome, Brave, Opera, etc)
+#### Mozilla Firefox is untested, but may still work without issue
 
 ## Add Tabs
 ![](https://i.imgur.com/pP4UMRx.gif)
