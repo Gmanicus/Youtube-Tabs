@@ -1,9 +1,15 @@
-# Youtube Tabs
-A browser extension that builds tab functionality to easily manage your subscriptions on Youtube
+<p align="center">
+  <img width="200" height="200" src="icon.png">
+  <h1 align="center">Youtube Tabs</h1>
+</p>
+<p align="center">
+  A browser extension that builds tab functionality to easily manage your subscriptions on Youtube
+</p>
+<p align="center">
+  <a href="https://chrome.google.com/webstore/detail/subscription-folders-for/jfdifkfmidcljpedkckpampdeffhlfhn">Chrome Webstore Download</a>
+</p>
 
-![](icon.png)
 
-[Chrome Webstore Download](https://chrome.google.com/webstore/detail/subscription-folders-for/jfdifkfmidcljpedkckpampdeffhlfhn)
 
 As an alternative to adding the extension via the Chrome webstore, clone the repo and load it as an unpacked extension via your ://extensions page.
 
