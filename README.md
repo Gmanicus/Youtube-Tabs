@@ -7,11 +7,14 @@
 </p>
 <p align="center">
   <a href="https://chrome.google.com/webstore/detail/subscription-folders-for/jfdifkfmidcljpedkckpampdeffhlfhn">Chrome Webstore Download</a>
+  <br>
+  <br>
+  <br>
 </p>
 
 
 
-As an alternative to adding the extension via the Chrome webstore, clone the repo and load it as an unpacked extension via your ://extensions page.
+As an alternative to adding the extension via the Chrome webstore, clone the repo and load it as an unpacked extension via your `://extensions` page.
 
 #### Tested and working on Chromium-based browsers (Chrome, Brave, Opera, etc)
 #### Mozilla Firefox is untested, but may still work without issue
