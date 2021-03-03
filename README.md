@@ -10,6 +10,8 @@ As an alternative to adding the extension via the Chrome webstore, clone the rep
 #### Tested and working on Chromium-based browsers (Chrome, Brave, Opera, etc)
 #### Mozilla Firefox is untested, but may still work without issue
 
+*Utilizes the [Iro.js library](https://iro.js.org/), which implements color-picking functionality*
+
 ## Add Tabs
 ![](https://i.imgur.com/pP4UMRx.gif)
 
