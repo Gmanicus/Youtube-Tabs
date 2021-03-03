@@ -2,6 +2,7 @@
 var hexDigits = new Array("0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"); 
 var currentURL = "";
 var scrollDist = 0;
+var darkModeEnabled = false;
 
 var guide = document.getElementById("guide-content");
 var innerGuide = document.getElementById("guide-inner-content");
@@ -77,6 +78,7 @@ function updateSubs(filter) {
     widgets = getSubs(widgetContainer, filter);
     addSubSlides(widgets);
     addSubListeners(widgets);
+    checkDarkMode();
 }
 
 function addSubSlides(nodes) {
@@ -402,6 +404,44 @@ function generateTab(name, id, color) {
     return tab;
 }
 
+function updateLightMode(nodes) {
+    console.log( (darkModeEnabled) ? "[Youtube Tabs] Enabling Dark Mode..." : "[Youtube Tabs] Disabling Dark Mode..." );
+    console.log(nodes);
+    for (index in nodes) {
+        // First child (sub) > edit first and second child (sub-slide, sub-cover)
+        let sub = nodes[index].firstChild;
+        if (!sub) { continue; }
+        if (darkModeEnabled) {
+            sub.childNodes[0].classList.add("dark");
+            sub.childNodes[1].classList.add("dark");
+        } else {
+            sub.childNodes[0].classList.remove("dark");
+            sub.childNodes[1].classList.remove("dark");
+        }
+    }
+
+    // first child (tab-menu) > edit third child (tab-menu-name)
+    let tabs = document.getElementsByClassName("tab");
+    for (index in tabs) {
+        if (darkModeEnabled) {
+            tabs[index].firstChild.childNodes[2].classList.add("dark-menu-item");
+            tabs[index].firstChild.childNodes[2].classList.add("dark-menu-item");
+        } else {
+            tabs[index].firstChild.childNodes[2].classList.remove("dark-menu-item");
+            tabs[index].firstChild.childNodes[2].classList.remove("dark-menu-item");
+        }
+    }
+}
+
+function checkDarkMode() {
+    // Get the hex value of the actual computed style and compare it to known values
+    guideOnDarkMode = rgb2hex( window.getComputedStyle(guide).getPropertyValue("background") ).includes("212121");
+    if (darkModeEnabled != guideOnDarkMode) {
+        darkModeEnabled = guideOnDarkMode;
+        updateLightMode(getSubs(widgetContainer));
+    }
+}
+
 
 
 function saveData() {
@@ -418,7 +458,7 @@ function getSubs(container, filterNew) {
         // If this child is a tab, work through its children and skip the tab itself
         if (nodes[index].className == "tab") {
             add = getSubs(nodes[index], filterNew);
-            if (add) { newList.push(add); }
+            if (add) { newList.push.apply(newList, add); }
             continue;
         } else if (nodes[index].className == "tab-menu") {
             continue;
@@ -469,7 +509,7 @@ function convertColor(color) {
 
 //Function to convert rgb color to hex format
 function rgb2hex(rgb) {
-    rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
     return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
 }
 

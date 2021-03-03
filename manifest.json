@@ -1,7 +1,7 @@
 {
-  "name": "Subscription Folders for Youtube",
-  "description": "Tidy up that Youtube subscription list with groups",
-  "version": "0.1",
+  "name": "Youtube Tabs",
+  "description": "Tidy up that Youtube subscription list with tab groups",
+  "version": "1.0.1",
   "manifest_version": 2,
   "content_scripts": [
     {
