@@ -8,8 +8,10 @@
 
 .tab {
     position: relative;
+    z-index: 1;
     height: fit-content;
     width: 100%;
+    max-height: fit-content;
 
     padding-top: 10px; padding-bottom: 10px;
     border: 6px solid firebrick;
@@ -17,39 +19,38 @@
     border-right: hidden;
     box-sizing: border-box;
     box-shadow: -1px -3px 3px -2px gray;
-    /* transition: height 0.3s ease-in-out; */
+    background-color: white;
 }
 
 .tab-menu {
+    position: relative;
+    z-index: 1;
     display: flex;
-    width: 100%;
+    width: calc(100% - 10px);
     padding-left: 10px;
     align-items: center;
-} .tab-menu-edit {
+    background-color: white;
+}  .tab-menu-name {
     display: inline-block;
-    width: 20px;
-    height: 20px;
-    margin: 5px;
-    background-image: url("https://i.imgur.com/HyiPKvs.png");
-    background-size: contain;
-} .tab-menu-edit:hover {
-    filter: contrast(100);
-    cursor: pointer;
-} .tab-menu-delete {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    margin: 5px;
-    background-image: url("https://i.imgur.com/zSqjPhr.png");
-    background-size: contain;
-} .tab-menu-delete:hover {
-    filter: contrast(100);
-    cursor: pointer;
-} .tab-menu-name {
-    display: inline-block;
-    margin: 10px;
+    margin-left: 30px;
     color: #444;
     font-weight: lighter;
+} .tab-menu-btn {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin: 5px;
+    background-size: contain;
+} .tab-menu-btn:hover {
+    filter: contrast(100);
+    cursor: pointer;
+} .edit-back {
+    background-image: url("https://i.imgur.com/HyiPKvs.png");
+} .delete-back {
+    background-image: url("https://i.imgur.com/zSqjPhr.png");
+} .expand-arrow {
+    background-image: url("https://i.imgur.com/aC4kpD4g.png");
+    transition: all 0.1s ease-in-out;
 }
 
 .sub {

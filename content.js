@@ -83,6 +83,7 @@ function updateSubs(filter) {
 
 function addSubSlides(nodes) {
     for (index in nodes) {
+        if (!nodes[index]) { continue; }
         sub = document.createElement("span"); sub.className = "sub"
         subSlide = document.createElement("div"); subSlide.className = "sub-slide"
         subIcon = document.createElement("div"); subIcon.className = "sub-icon"
@@ -263,7 +264,8 @@ function createTab(e) {
     subTabDict[ parseInt(tab.id) ] = {
         name: tab.title,
         index: tabNodes.length-1,
-        color: convertColor(tab.style.borderColor)
+        color: convertColor(tab.style.borderColor),
+        hidden: false
     };
     
     moveSubToTab(null, parseInt(tab.id));
@@ -273,7 +275,7 @@ function createTab(e) {
 function editTab(e) {
     e.stopPropagation();
     let tab = e.target.parentElement.parentElement;
-    if (e.target.className == "create-tab-btn") {
+    if (e.target.className.includes("create-tab-btn")) {
         let tabName = document.getElementById("create-tab-name").value;
 
         if (tabName == "") {
@@ -289,7 +291,7 @@ function editTab(e) {
 
         // Edit values in elements
         tab.title = tabName;
-        tab.childNodes[0].childNodes[2].innerHTML = tabName.toUpperCase();
+        tab.childNodes[0].childNodes[3].innerHTML = tabName.toUpperCase();
         tab.style.borderColor = colorPicker.color.hexString;
 
         // SAVE DATA
@@ -336,6 +338,25 @@ function deleteTab(e) {
     }
 }
 
+function toggleTab(e) {
+    e.stopPropagation();
+    let tab = e.target.parentElement.parentElement;
+    if (subTabDict[parseInt(tab.id)].hidden) {
+        console.log("[Youtube Tabs] SHOWING: " + tab.title);
+        tab.style.maxHeight = "fit-content";
+        tab.firstChild.childNodes[2].style.transform = "rotate(0deg)";
+    } else {
+        console.log("[Youtube Tabs] HIDING: " + tab.title);
+        // Set to 20px to show tab-menu
+        tab.style.maxHeight = "50px";
+        tab.firstChild.childNodes[2].style.transform = "rotate(180deg)";
+    }
+
+    // Invert the hidden property of this sub in the saved data
+    subTabDict[parseInt(tab.id)].hidden = !subTabDict[parseInt(tab.id)].hidden;
+    saveData();
+}
+
 function interruptClick(e) {
     e.stopPropagation();
 }
@@ -374,22 +395,29 @@ function setupTabs() {
     }
     
     for (key in subTabDict) {
-        generateTab(subTabDict[key].name, key, subTabDict[key].color);
+        generateTab(subTabDict[key].name, key, subTabDict[key].color, subTabDict[key].hidden);
     }
 }
 
-function generateTab(name, id, color) {
+function generateTab(name, id, color, hidden) {
     let tab = document.createElement("div"); tab.className = "tab"; tab.title = name; tab.id = id; tab.style.borderColor = color;
     let tabHeader = document.createElement("div"); tabHeader.className = "tab-menu";
-    let tabHeaderEdit = document.createElement("div"); tabHeaderEdit.className = "tab-menu-edit"; tabHeaderEdit.title = "Edit";
-    let tabHeaderDelete = document.createElement("div"); tabHeaderDelete.className = "tab-menu-delete"; tabHeaderDelete.title = "Delete";
+    let tabHeaderEdit = document.createElement("div"); tabHeaderEdit.className = "tab-menu-btn edit-back"; tabHeaderEdit.title = "Edit";
+    let tabHeaderDelete = document.createElement("div"); tabHeaderDelete.className = "tab-menu-btn delete-back"; tabHeaderDelete.title = "Delete";
+    let tabHeaderExpand = document.createElement("div"); tabHeaderExpand.className = "tab-menu-btn expand-arrow"; tabHeaderExpand.title = "Expand/Contract";
     let tabHeaderName = document.createElement("h3"); tabHeaderName.innerHTML = name.toUpperCase(); tabHeaderName.className = "tab-menu-name";
 
     tabHeaderDelete.addEventListener('click', deleteTab);
     tabHeaderEdit.addEventListener('click', editTab);
+    tabHeaderExpand.addEventListener('click', toggleTab);
+    if (hidden) {
+        tab.style.maxHeight = "50px";
+        tabHeaderExpand.style.transform = "rotate(180deg)";
+    }
 
     tabHeader.appendChild(tabHeaderDelete);
     tabHeader.appendChild(tabHeaderEdit);
+    tabHeader.appendChild(tabHeaderExpand);
     tabHeader.appendChild(tabHeaderName);
     tab.appendChild(tabHeader);
     widgetContainer.appendChild(tab);
@@ -405,8 +433,7 @@ function generateTab(name, id, color) {
 }
 
 function updateLightMode(nodes) {
-    console.log( (darkModeEnabled) ? "[Youtube Tabs] Enabling Dark Mode..." : "[Youtube Tabs] Disabling Dark Mode..." );
-    console.log(nodes);
+    console.log( (!darkModeEnabled) ? "[Youtube Tabs] Enabling Dark Mode..." : "[Youtube Tabs] Disabling Dark Mode..." );
     for (index in nodes) {
         // First child (sub) > edit first and second child (sub-slide, sub-cover)
         let sub = nodes[index].firstChild;
@@ -423,12 +450,17 @@ function updateLightMode(nodes) {
     // first child (tab-menu) > edit third child (tab-menu-name)
     let tabs = document.getElementsByClassName("tab");
     for (index in tabs) {
+        if (!tabs[index]) { continue; }
         if (darkModeEnabled) {
-            tabs[index].firstChild.childNodes[2].classList.add("dark-menu-item");
-            tabs[index].firstChild.childNodes[2].classList.add("dark-menu-item");
+            tabs[index].classList.add("dark");
+            tabs[index].firstChild.classList.add("dark");
+            tabs[index].firstChild.childNodes[3].classList.add("dark-menu-item");
+            tabs[index].firstChild.childNodes[3].classList.add("dark-menu-item");
         } else {
-            tabs[index].firstChild.childNodes[2].classList.remove("dark-menu-item");
-            tabs[index].firstChild.childNodes[2].classList.remove("dark-menu-item");
+            tabs[index].classList.remove("dark");
+            tabs[index].firstChild.classList.remove("dark");
+            tabs[index].firstChild.childNodes[3].classList.remove("dark-menu-item");
+            tabs[index].firstChild.childNodes[3].classList.remove("dark-menu-item");
         }
     }
 }
@@ -455,20 +487,22 @@ function getSubs(container, filterNew) {
     // nodes.length = 0 if the container is empty, but not actually........... What the frick.
     if (nodes.length < 1) { return null; }
     for (index in nodes) {
+        // Apparently childNodes includes the text of some elements as a separate item, so it will be defined, but the class name will not
+        if (!nodes[index].className) { continue; }
         // If this child is a tab, work through its children and skip the tab itself
-        if (nodes[index].className == "tab") {
+        if (nodes[index].className.includes("tab")) {
             add = getSubs(nodes[index], filterNew);
             if (add) { newList.push.apply(newList, add); }
             continue;
-        } else if (nodes[index].className == "tab-menu") {
+        } else if (nodes[index].className.includes("tab-menu")) {
             continue;
-        } else if (nodes[index].className == "create-tab-menu") {
+        } else if (nodes[index].className.includes("create-tab-menu")) {
             continue;
         }
 
         // If we want to filter out subs that already have the tab elements...
         if (filterNew) {
-            if (nodes[index].firstChild.className == "sub") {
+            if (nodes[index].firstChild.className.includes("sub")) {
                 continue
             }
         }
