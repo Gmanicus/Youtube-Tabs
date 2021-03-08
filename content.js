@@ -101,7 +101,11 @@ function addSubSlides(nodes) {
         if (!(sub.id in subLinkDict)) {
             subLinkDict[sub.id] = -1;
         } else if (subLinkDict[sub.id] != -1) {
-            tabNum = subTabDict[ subLinkDict[sub.id] ].index;
+            if (subTabDict[ subLinkDict[sub.id] ] != undefined) {
+                tabNum = subTabDict[ subLinkDict[sub.id] ].index;
+            } else {
+                tabNum = -1;
+            }
             // Set sub as child of corresponding tab
             if (tabNum >= 0 && tabNodes[tabNum]) {
                 tabNodes[tabNum].appendChild(nodes[index]);
@@ -160,7 +164,8 @@ function tabMenu(e, edit) {
         sliderSize: 15,
         layoutDirection: "horizontal",
         borderWidth: 2,
-        borderColor: "#ddd"
+        borderColor: "#ddd",
+        color: { r: getRandomInt(255), g:getRandomInt(255), b:getRandomInt(255) }
     });
 
     let difference = {};
@@ -181,6 +186,12 @@ function tabMenu(e, edit) {
     colorMenu.appendChild(name);
     colorMenu.appendChild(cancel);
     colorMenu.appendChild(confirm);
+
+    if (darkModeEnabled) {
+        colorMenu.classList.add("dark");
+        name.style.backgroundColor = "#000";
+        name.classList.add("dark-menu-item");
+    }
 
     name.addEventListener('click', interruptClick); // Stop click from causing a redirect to channel page
     cancel.addEventListener('click', closeMenu);
@@ -293,6 +304,7 @@ function editTab(e) {
         tab.title = tabName;
         tab.childNodes[0].childNodes[3].innerHTML = tabName.toUpperCase();
         tab.style.borderColor = colorPicker.color.hexString;
+        tab.style.overflow = subTab.hidden;
 
         // SAVE DATA
         closeMenu();
@@ -300,7 +312,9 @@ function editTab(e) {
     } else {
         console.log("[Youtube Tabs] EDITING: " + tab.title);
         tabMenu(e, tab);
+
         colorPicker.color.hexString = convertColor(tab.style.borderColor);
+        tab.style.overflow = "visible";
     }
 }
 
@@ -323,7 +337,7 @@ function deleteTab(e) {
         // Update child subs
         for (key in subLinkDict) {
             if (subLinkDict[key] == parseInt(tab.id)) {
-                subTabDict[key] = -1;
+                subLinkDict[key] = -1;
             }
         }
 
@@ -344,11 +358,13 @@ function toggleTab(e) {
     if (subTabDict[parseInt(tab.id)].hidden) {
         console.log("[Youtube Tabs] SHOWING: " + tab.title);
         tab.style.maxHeight = "fit-content";
+        tab.style.overflow = "visible";
         tab.firstChild.childNodes[2].style.transform = "rotate(0deg)";
     } else {
         console.log("[Youtube Tabs] HIDING: " + tab.title);
         // Set to 20px to show tab-menu
         tab.style.maxHeight = "50px";
+        tab.style.overflow = "hidden";
         tab.firstChild.childNodes[2].style.transform = "rotate(180deg)";
     }
 
@@ -369,20 +385,28 @@ function setupSubMenu() {
         menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = tabNodes[tab].title.toUpperCase(); menuItem.id = tabNodes[tab].id;
         menuItem.addEventListener('click', moveSubToTab);
         pulledMenu.appendChild(menuItem);
+
+        if (darkModeEnabled) { menuItem.classList.add("dark-menu-item"); }
     }
     
     line = document.createElement("hr"); line.style = "border-top: 1px solid lightgray; width: 90%; margin: auto; padding-bottom: 5px; margin-top: 5px;";
     addTab = document.createElement("div"); addTab.className = "menu-link"; addTab.innerHTML = "ADD A TAB";
     addTab.addEventListener('click', tabMenu);
+
+    if (darkModeEnabled) { addTab.classList.add("dark-menu-item"); }
     
     pulledMenu.appendChild(line);
     pulledMenu.appendChild(addTab);
+
+    if (darkModeEnabled) { pulledMenu.classList.add("dark"); }
 
     // If this sub is already in a tab...
     if (subLinkDict[pulledSub.id] != -1) {
         removeFromTab = document.createElement("div"); removeFromTab.className = "menu-link"; removeFromTab.id = -1; removeFromTab.innerHTML = "REMOVE FROM TAB";
         removeFromTab.addEventListener('click', moveSubToTab);
         pulledMenu.appendChild(removeFromTab);
+
+        if (darkModeEnabled) { removeFromTab.classList.add("dark-menu-item"); }
     }
 
 }
@@ -393,10 +417,14 @@ function setupTabs() {
         subTabDict = {};
         return;
     }
-    
+
     for (key in subTabDict) {
+        // Somehow, a subLink item wormed its way into the subTabDict. I have no idea how it did this, so now we need to clean it
+        if (subTabDict[key].name == undefined) { delete subTabDict[key]; continue; }
         generateTab(subTabDict[key].name, key, subTabDict[key].color, subTabDict[key].hidden);
     }
+
+    console.log(subTabDict);
 }
 
 function generateTab(name, id, color, hidden) {
@@ -410,9 +438,16 @@ function generateTab(name, id, color, hidden) {
     tabHeaderDelete.addEventListener('click', deleteTab);
     tabHeaderEdit.addEventListener('click', editTab);
     tabHeaderExpand.addEventListener('click', toggleTab);
+
     if (hidden) {
+        tab.style.overflow = "hidden";
         tab.style.maxHeight = "50px";
         tabHeaderExpand.style.transform = "rotate(180deg)";
+    }
+    if (darkModeEnabled) {
+        tab.classList.add("dark");
+        tabHeader.classList.add("dark");
+        tabHeaderName.classList.add("dark-menu-item");
     }
 
     tabHeader.appendChild(tabHeaderDelete);
@@ -449,17 +484,16 @@ function updateLightMode(nodes) {
 
     // first child (tab-menu) > edit third child (tab-menu-name)
     let tabs = document.getElementsByClassName("tab");
+    console.log(tabs);
     for (index in tabs) {
-        if (!tabs[index]) { continue; }
+        if (!tabs[index].classList) { continue; } // ?????? I don't even know
         if (darkModeEnabled) {
             tabs[index].classList.add("dark");
             tabs[index].firstChild.classList.add("dark");
             tabs[index].firstChild.childNodes[3].classList.add("dark-menu-item");
-            tabs[index].firstChild.childNodes[3].classList.add("dark-menu-item");
         } else {
             tabs[index].classList.remove("dark");
             tabs[index].firstChild.classList.remove("dark");
-            tabs[index].firstChild.childNodes[3].classList.remove("dark-menu-item");
             tabs[index].firstChild.childNodes[3].classList.remove("dark-menu-item");
         }
     }
