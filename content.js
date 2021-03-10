@@ -15,6 +15,10 @@ var tabNodes = [];
 var subLinkDict = {};
 var subTabDict = {};
 
+// Grab tab shared variables
+var subProps = {};
+var grabbedTab = null;
+
 
 function waitForPageLoad() {
     check = setInterval(function(){
@@ -270,6 +274,8 @@ function createTab(e) {
     }
 
     let tab = generateTab(tabName, new Date().getTime(), tabColor);
+    // Insert tab after the last visible tab in the menu
+    insertAfter(widgetContainer.childNodes[tabNodes.length-1], tab);
 
     subLinkDict[pulledSub.id] = parseInt(tab.id);
     subTabDict[ parseInt(tab.id) ] = {
@@ -362,7 +368,7 @@ function toggleTab(e) {
         tab.firstChild.childNodes[2].style.transform = "rotate(0deg)";
     } else {
         console.log("[Youtube Tabs] HIDING: " + tab.title);
-        // Set to 20px to show tab-menu
+        // Set to 50px to show tab-menu
         tab.style.maxHeight = "50px";
         tab.style.overflow = "hidden";
         tab.firstChild.childNodes[2].style.transform = "rotate(180deg)";
@@ -371,6 +377,97 @@ function toggleTab(e) {
     // Invert the hidden property of this sub in the saved data
     subTabDict[parseInt(tab.id)].hidden = !subTabDict[parseInt(tab.id)].hidden;
     saveData();
+}
+
+function showTab(tab) {
+    // Explicitly force a tab to show rather than toggle
+    console.log("[Youtube Tabs] SHOWING: " + tab.title);
+    tab.style.maxHeight = "fit-content";
+    tab.style.overflow = "visible";
+    tab.firstChild.childNodes[2].style.transform = "rotate(0deg)";
+}
+
+function hideTab(tab) {
+    // Explicitly force a tab to hide rather than toggle
+    console.log("[Youtube Tabs] HIDING: " + tab.title);
+    // Set to 50px to show tab-menu
+    tab.style.maxHeight = "50px";
+    tab.style.overflow = "hidden";
+    tab.firstChild.childNodes[2].style.transform = "rotate(180deg)";
+}
+
+function grabTab(e) {
+    e.stopPropagation();
+    let tab = e.target.parentElement.parentElement;
+    grabbedTab = tab;
+    document.body.style.cursor = "grabbing";
+    // Make list of tabs and their current show status
+    // Hide all tabs
+    // Focus mouse on current grab position to prevent skipping in the next step
+    // Add mouseover event to every tab and switch tab indexes when the event is encountered
+    // Revert all changes except for changes to index when mousebutton is let go > placeTab()
+    // Clear shared variables
+
+    innerGuide.style.transition = null; // Temporarily disable easing on innerGuide to make it an instantaneous movement
+    let prevPos = tab.getBoundingClientRect().top;
+
+    for (index in tabNodes) {
+        subProps[tabNodes[index].id] = { hidden: (tabNodes[index].style.overflow == "hidden") ? true : false};
+        if (!subProps[tabNodes[index].id].hidden) { hideTab(tabNodes[index]); }
+        tabNodes[index].addEventListener('mouseenter', moveTab);
+    }
+
+    let posDifference = tab.getBoundingClientRect().top - prevPos;
+    innerGuide.style.marginTop = (parseInt(innerGuide.style.marginTop) - posDifference) + "px";
+    scrollDist -= posDifference;
+
+    window.addEventListener("mouseup", placeTab);
+}
+
+function placeTab(e) {
+    e.stopPropagation();
+    // Show tabs that were previously not hidden
+    // Clear shared variables
+    // Set cursor back to normal
+    // Revert misc changes
+    // Remove listener for mouseup
+    // Save data
+
+    for (key in subProps) {
+        if (!subProps[key].hidden) {
+            showTab(document.getElementById(key));
+        }
+    }
+
+    for (index in tabNodes) {
+        tabNodes[index].removeEventListener('mouseenter', moveTab);
+    }
+
+    subProps = {};
+    grabbedTab = null;
+    document.body.style.cursor = "default";
+    innerGuide.style.transition = "all 0.05s ease-out";
+    window.removeEventListener("mouseup", placeTab);
+    saveData();
+}
+
+function moveTab(e) {
+    // Get target id and check if index is greater or less than grabbed tab index
+    // Greater than, insert after
+    // Less than, insert before
+    // Either way, update indexes in subTabDict
+
+    if (e.target == grabbedTab) { return; }
+    if (!e.target.className.includes("tab")) { return; }
+    if (subTabDict[e.target.id].index > subTabDict[grabbedTab.id].index) {
+        insertAfter(e.target, grabbedTab);
+    } else {
+        widgetContainer.insertBefore(grabbedTab, e.target);
+    }
+
+    let newIndex = subTabDict[e.target.id].index;
+    subTabDict[e.target.id].index = subTabDict[grabbedTab.id].index;
+    subTabDict[grabbedTab.id].index = newIndex;
 }
 
 function interruptClick(e) {
@@ -418,13 +515,25 @@ function setupTabs() {
         return;
     }
 
-    for (key in subTabDict) {
-        // Somehow, a subLink item wormed its way into the subTabDict. I have no idea how it did this, so now we need to clean it
-        if (subTabDict[key].name == undefined) { delete subTabDict[key]; continue; }
-        generateTab(subTabDict[key].name, key, subTabDict[key].color, subTabDict[key].hidden);
+    // Sort tabs according to index property
+    let tuples = [];
+    for (let key in subTabDict) tuples.push([key, subTabDict[key].index]);
+
+    tuples.sort(function(a, b) {
+        a = a[1];
+        b = b[1];
+
+        return a < b ? -1 : (a > b ? 1 : 0);
+    });
+
+    // Generate tab in sorted order
+    for (var i = 0; i < tuples.length; i++) {
+        let sortedKey = tuples[i][0];
+
+        generateTab(subTabDict[sortedKey].name, sortedKey, subTabDict[sortedKey].color, subTabDict[sortedKey].hidden);
     }
 
-    console.log(subTabDict);
+    
 }
 
 function generateTab(name, id, color, hidden) {
@@ -434,10 +543,12 @@ function generateTab(name, id, color, hidden) {
     let tabHeaderDelete = document.createElement("div"); tabHeaderDelete.className = "tab-menu-btn delete-back"; tabHeaderDelete.title = "Delete";
     let tabHeaderExpand = document.createElement("div"); tabHeaderExpand.className = "tab-menu-btn expand-arrow"; tabHeaderExpand.title = "Expand/Contract";
     let tabHeaderName = document.createElement("h3"); tabHeaderName.innerHTML = name.toUpperCase(); tabHeaderName.className = "tab-menu-name";
+    let tabHeaderGrab = document.createElement("div"); tabHeaderGrab.className = "tab-menu-btn grab"; tabHeaderGrab.title = "Grab";
 
     tabHeaderDelete.addEventListener('click', deleteTab);
     tabHeaderEdit.addEventListener('click', editTab);
     tabHeaderExpand.addEventListener('click', toggleTab);
+    tabHeaderGrab.addEventListener('mousedown', grabTab);
 
     if (hidden) {
         tab.style.overflow = "hidden";
@@ -454,6 +565,7 @@ function generateTab(name, id, color, hidden) {
     tabHeader.appendChild(tabHeaderEdit);
     tabHeader.appendChild(tabHeaderExpand);
     tabHeader.appendChild(tabHeaderName);
+    tabHeader.appendChild(tabHeaderGrab);
     tab.appendChild(tabHeader);
     widgetContainer.appendChild(tab);
     
@@ -486,7 +598,7 @@ function updateLightMode(nodes) {
     let tabs = document.getElementsByClassName("tab");
     console.log(tabs);
     for (index in tabs) {
-        if (!tabs[index].classList) { continue; } // ?????? I don't even know
+        if (!tabs[index].classList) { continue; } // ?????? I don't even know why this is necessary
         if (darkModeEnabled) {
             tabs[index].classList.add("dark");
             tabs[index].firstChild.classList.add("dark");

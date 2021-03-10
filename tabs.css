@@ -36,6 +36,8 @@
     margin-left: 30px;
     color: #444;
     font-weight: lighter;
+    user-select: none;
+    pointer-events: none;
 } .tab-menu-btn {
     display: inline-block;
     width: 20px;
@@ -52,6 +54,19 @@
 } .expand-arrow {
     background-image: url("https://i.imgur.com/aC4kpD4g.png");
     transition: all 0.1s ease-in-out;
+} .grab {
+    z-index: 2;
+    position: absolute;
+    right: 0;
+
+    user-select: none;
+    opacity: 0;
+    background-image: url("https://i.imgur.com/HgNyz8j.png");
+    transition: all 0.1s ease-in-out;
+} .grab:hover {
+    filter: none;
+    opacity: 1;
+    cursor: grab;
 }
 
 .sub {
