@@ -10,6 +10,7 @@ var widgetContainer = null;
 var pulledSub = null;
 var pulledMenu = null;
 var colorPicker = null;
+var helpMenu = null;
 
 var tabNodes = [];
 var subLinkDict = {};
@@ -38,6 +39,13 @@ function waitForPageLoad() {
             
             clearInterval(check);
             setupSubs();
+            
+            let ver = chrome.runtime.getManifest().version;
+            let storedVer = localStorage.getItem("youtube_tabs_version");
+            if (storedVer != ver) {
+                localStorage.setItem("youtube_tabs_version", ver);
+                help();
+            }
         }
     }, 100);
 }
@@ -62,6 +70,11 @@ function setupSubs() {
     expandableWidget = widgetContainer.childNodes[widgetContainer.childNodes.length-1];
     appendChildren(widgetContainer, Array.from(expandableWidget.childNodes[3].childNodes[1].childNodes));
     expandableWidget.remove();
+
+    // Get the "Subscriptions" element and add our help/info button
+    infoBtn = document.createElement("div"); infoBtn.className = "info-btn"; infoBtn.style.backgroundImage = "url('https://i.imgur.com/9RJ5eKQ.png')"; infoBtn.title = "Help/Info";
+    infoBtn.addEventListener("click", help);
+    widgetContainer.parentElement.childNodes[1].appendChild(infoBtn);
 
     // Get saved data
     subLinkDict = JSON.parse(localStorage.getItem("subscription_links"));
@@ -477,6 +490,87 @@ function interruptClick(e) {
 
 
 
+function help(e) {
+    if (helpMenu) { return; }
+    let ver = "";
+    try { ver = chrome.runtime.getManifest().version; }
+    catch (e) { console.log("[Youtube Tabs] Unable to get version from manifest"); }
+
+    let poster = `
+    <div class="poster">
+        <div class="poster-close"></div>
+        <img class="poster-img" src="https://i.imgur.com/9RJ5eKQ.png">
+        <br>
+        <a class="poster-support" href="https://ko-fi.com/geek" target="_blank">Support Me with a Rubber Ducky</a>
+        <br>
+        <br>
+        <h1>Youtube Tabs</h1>
+        <br>
+        <h5>Created by Grant @ Geek Overdrive Studio</h5>
+        <br>
+        <h3>${ver} Update</h3>
+
+        <br>
+        <br>
+        <p>- Added help menu</p>
+        <p>- Added grab & move fuctionality</p>
+        <br>
+        <br>
+
+        <h2>Creating Tabs and Organizing Subs</h2>
+        <p class="poster-text">To create a tab, mouse over a sub. A button will pop out.
+            Click that button and scroll down to the 'Add a Tab' button. Customize as you wish and hit 'Confirm'.</p>
+        <br>
+        <p class="poster-text">To sort a sub, mouse over it. A button will pop out.
+            Click that button and select the tab you want to sort it into.</p>
+        <img class="poster-img" src="https://i.imgur.com/x0SQvik.gif">
+
+        <h2>Show/Hide Tabs</h2>
+        <p class="poster-text">To show or hide a tab, mouse over the arrow icon in the tab's head.
+            Click it to toggle the tab's visibility.</p>
+        <img class="poster-img" src="https://i.imgur.com/MUlhz4e.gif">
+
+        <h2>Editing Tabs</h2>
+        <p class="poster-text">To edit a tab, mouse over the pen icon in the tab's head.
+            Click it and customize the tab's settings with the menu that pops out.</p>
+        <img class="poster-img" src="https://i.imgur.com/X4CfUOn.gif">
+
+        <h2>Deleting Tabs</h2>
+        <p class="poster-text">To delete a tab, mouse over the trash can icon in the tab's head.
+            Click it and hit 'confirm' in the alert menu.</p>
+        <img class="poster-img" src="https://i.imgur.com/AjuYDky.gif">
+
+        <h2>Moving Tabs</h2>
+        <p class="poster-text">To move a tab, mouse over the right side of the tab's head. A sandwich icon will appear.
+            Click, hold, and drag the tab to move it.</p>
+        <img class="poster-img" src="https://i.imgur.com/YIwtfgO.gif">
+
+        <br>
+        <br>
+        <br>
+        <p class="poster-text">Thanks for using my extension! If you would be so kind,
+            please give it a <a href="https://chrome.google.com/webstore/detail/youtube-tabs/jfdifkfmidcljpedkckpampdeffhlfhn" target="_blank">rating</a>
+            or <a href="https://ko-fi.com/geek" target="_blank">support me</a> for the work that I put into this.</p>
+        <br>
+        <br>
+        <br>
+    </div>
+    `
+
+    darkContainer = document.createElement("div"); darkContainer.className = "darken"; darkContainer.innerHTML = poster;
+    if (darkModeEnabled) { darkContainer.childNodes[1].classList.add("dark"); darkContainer.childNodes[1].classList.add("dark-menu-item"); }
+    document.body.appendChild(darkContainer);
+    
+    helpMenu = darkContainer;
+    document.getElementsByClassName("poster-close")[0].addEventListener("click", closeHelpMenu)
+}
+
+function closeHelpMenu(e) {
+    e.stopPropagation();
+    if (helpMenu) { helpMenu.remove(); }
+    helpMenu = null;
+}
+
 function setupSubMenu() {
     for (tab in tabNodes) {
         menuItem = document.createElement("div"); menuItem.className = "menu-link"; menuItem.innerHTML = tabNodes[tab].title.toUpperCase(); menuItem.id = tabNodes[tab].id;
@@ -580,7 +674,7 @@ function generateTab(name, id, color, hidden) {
 }
 
 function updateLightMode(nodes) {
-    console.log( (!darkModeEnabled) ? "[Youtube Tabs] Enabling Dark Mode..." : "[Youtube Tabs] Disabling Dark Mode..." );
+    console.log( (darkModeEnabled) ? "[Youtube Tabs] Enabling Dark Mode..." : "[Youtube Tabs] Disabling Dark Mode..." );
     for (index in nodes) {
         // First child (sub) > edit first and second child (sub-slide, sub-cover)
         let sub = nodes[index].firstChild;
