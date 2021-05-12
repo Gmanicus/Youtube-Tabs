@@ -176,7 +176,7 @@ function tabMenu(e, edit) {
     container.appendChild(colorMenu);
 
     // Add Color Picker UI
-    colorPicker = new window.iro.ColorPicker("#color-picker", {
+    colorPicker = new iro.ColorPicker("#color-picker", {
         width: 100,
         sliderSize: 15,
         layoutDirection: "horizontal",
@@ -512,8 +512,8 @@ function help(e) {
 
         <br>
         <br>
-        <p>- Added help menu</p>
-        <p>- Added grab & move fuctionality</p>
+        <p>- Made Youtube Tabs compatible with Firefox</p>
+        <p>- Fixed help menu widget positioning issues</p>
         <br>
         <br>
 
@@ -549,7 +549,9 @@ function help(e) {
         <br>
         <br>
         <p class="poster-text">Thanks for using my extension! If you would be so kind,
-            please give it a <a href="https://chrome.google.com/webstore/detail/youtube-tabs/jfdifkfmidcljpedkckpampdeffhlfhn" target="_blank">rating</a>
+            please give it a rating 
+            (<a href="https://chrome.google.com/webstore/detail/youtube-tabs/jfdifkfmidcljpedkckpampdeffhlfhn" target="_blank">Chrome</a>)
+            (<a href="https://chrome.google.com/webstore/detail/youtube-tabs/jfdifkfmidcljpedkckpampdeffhlfhn" target="_blank">Firefox</a>)
             or <a href="https://ko-fi.com/geek" target="_blank">support me</a> for the work that I put into this.</p>
         <br>
         <br>
@@ -784,6 +786,7 @@ function convertColor(color) {
 //Function to convert rgb color to hex format
 function rgb2hex(rgb) {
     rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgb === null) { rgb = [0,0,0] } // rgb cas miss the match if the guide is set to transparent, which happens when the sideview is in mobile/slim mode
     return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
 }
 

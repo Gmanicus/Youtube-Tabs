@@ -29,15 +29,20 @@
     left: 40%; top: 25%;
 
     overflow-y: scroll;
+    overflow-x: hidden;
     text-align: center;
     padding: 10px;
     background-color: white;
     border: solid 2px #ddd;
     border-radius: 10px;
     font-size: 14px;
+
+    /* Mozilla Firefox custom scrollbar support */
+    scrollbar-color: #888 #eee; 
+    scrollbar-width: thin;
 } .poster-close {
     position: sticky;
-    left: 100%;
+    left: calc(100% - 20px);
     top: 0;
     width: 25px;
     height: 25px;
@@ -73,13 +78,13 @@
 }
 
 .info-btn {
-    position: absolute;
+    position: inline-block;
     width: 30px;
     height: 30px;
     margin: 5px;
-    right: 15px;
-    top: 50%;
+    margin-top: -35px;
     background-size: contain;
+    float: right;
 } .info-btn:hover {
     filter: contrast(100);
     cursor: pointer;
