@@ -7,6 +7,7 @@
 </p>
 <p align="center">
   <a href="https://chrome.google.com/webstore/detail/subscription-folders-for/jfdifkfmidcljpedkckpampdeffhlfhn">Chrome Webstore Download</a>
+  |
   <a href="https://addons.mozilla.org/en-US/firefox/addon/youtube-tabs-/">Firefox Addon Download</a>
   <br>
   <br>
