@@ -7,6 +7,7 @@
 </p>
 <p align="center">
   <a href="https://chrome.google.com/webstore/detail/subscription-folders-for/jfdifkfmidcljpedkckpampdeffhlfhn">Chrome Webstore Download</a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/youtube-tabs-/">Firefox Addon Download</a>
   <br>
   <br>
   <br>
@@ -14,12 +15,11 @@
 
 
 
-As an alternative to adding the extension via the Chrome webstore, clone the repo and load it as an unpacked extension via your `://extensions` page.
+As an alternative to adding the extension via the Chrome/Firefox webstores, clone the repo and load it as an unpacked extension via your `://extensions` page.
 
-#### Tested and working on Chromium-based browsers (Chrome, Brave, Opera, etc)
-#### Mozilla Firefox is untested, but may still work without issue
+#### Tested and working on Chromium-based browsers (Chrome, Brave, Opera, etc) and Mozilla Firefox
 
-*Utilizes the [Iro.js library](https://iro.js.org/), which implements color-picking functionality*
+*Utilizes the [Iro.js color picker library](https://iro.js.org/)*
 
 ## Add Tabs
 ![](https://i.imgur.com/pP4UMRx.gif)

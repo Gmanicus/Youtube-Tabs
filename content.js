@@ -3,6 +3,7 @@ var hexDigits = new Array("0","1","2","3","4","5","6","7","8","9","a","b","c","d
 var currentURL = "";
 var scrollDist = 0;
 var darkModeEnabled = false;
+var userAgent = "";
 
 var guide = document.getElementById("guide-content");
 var innerGuide = document.getElementById("guide-inner-content");
@@ -26,6 +27,9 @@ function waitForPageLoad() {
         if (document.getElementsByClassName("tab").length > 0) { return; }
         if (document.getElementById("sections")) {
             console.log("[Youtube Tabs] Got Sections...");
+
+            // Get browser agent
+            userAgent = navigator.userAgent;
             
             // Sections > Subscription Renderer > Subscription List
             // Get "Show # More" button (<a> element)
@@ -376,7 +380,7 @@ function toggleTab(e) {
     let tab = e.target.parentElement.parentElement;
     if (subTabDict[parseInt(tab.id)].hidden) {
         console.log("[Youtube Tabs] SHOWING: " + tab.title);
-        tab.style.maxHeight = "fit-content";
+        tab.style.maxHeight = (userAgent.includes("Firefox") ? "-moz-max-content" : "fit-content");
         tab.style.overflow = "visible";
         tab.firstChild.childNodes[2].style.transform = "rotate(0deg)";
     } else {
@@ -395,7 +399,7 @@ function toggleTab(e) {
 function showTab(tab) {
     // Explicitly force a tab to show rather than toggle
     console.log("[Youtube Tabs] SHOWING: " + tab.title);
-    tab.style.maxHeight = "fit-content";
+    tab.style.maxHeight = (userAgent.includes("Firefox") ? "-moz-max-content" : "fit-content");
     tab.style.overflow = "visible";
     tab.firstChild.childNodes[2].style.transform = "rotate(0deg)";
 }
@@ -512,8 +516,8 @@ function help(e) {
 
         <br>
         <br>
-        <p>- Made Youtube Tabs compatible with Firefox</p>
-        <p>- Fixed help menu widget positioning issues</p>
+        <p>- Fixed Firefox dark mode compatibility issue
+        <p>- Fixed Firefox show/hide compatibility issue
         <br>
         <br>
 
@@ -709,7 +713,7 @@ function updateLightMode(nodes) {
 
 function checkDarkMode() {
     // Get the hex value of the actual computed style and compare it to known values
-    guideOnDarkMode = rgb2hex( window.getComputedStyle(guide).getPropertyValue("background") ).includes("212121");
+    guideOnDarkMode = rgb2hex( window.getComputedStyle(guide).getPropertyValue("background-color") ).includes("212121");
     if (darkModeEnabled != guideOnDarkMode) {
         darkModeEnabled = guideOnDarkMode;
         updateLightMode(getSubs(widgetContainer));
