@@ -1,6 +1,6 @@
 // Developed by Grant @ GeekOverdriveStudio
 var hexDigits = new Array("0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"); 
-var currentURL = "";
+var currentURL = window.location.href;
 var scrollDist = 0;
 var darkModeEnabled = false;
 var userAgent = "";
@@ -24,32 +24,31 @@ var grabbedTab = null;
 
 function waitForPageLoad() {
     check = setInterval(function(){
-        if (document.getElementsByClassName("tab").length > 0) { return; }
-        if (document.getElementById("sections")) {
-            console.log("[Youtube Tabs] Got Sections...");
+        if (document.getElementsByClassName("tab").length > 0) { return; } // If we already have set tabs
+        if (!document.getElementById("contentContainer").getAttribute("opened") == null) { return; } // If the side menu has not been opened yet
+        if (!document.getElementById("sections")) { return; } // If the sections have not been populated yet
 
-            // Get browser agent
-            userAgent = navigator.userAgent;
-            
-            // Sections > Subscription Renderer > Subscription List
-            // Get "Show # More" button (<a> element)
-            // Click it
+        // Get browser agent
+        userAgent = navigator.userAgent;
+        
+        // Sections > Subscription Renderer > Subscription List
+        // Get "Show # More" button (<a> element)
+        // Click it
 
-            // 'sections' sometimes errors out here, saying it can't get childnodes of undefined.
-            // Considering that this is inside an if block checking that that is NOT the case, I am not even going to try to fix this
-            subList = document.getElementById("sections").childNodes[1].childNodes[3];
-            expandBtn = subList.childNodes[subList.childNodes.length-1].childNodes[1].childNodes[1];
-            expandBtn.click();
-            
-            clearInterval(check);
-            setupSubs();
-            
-            let ver = chrome.runtime.getManifest().version;
-            let storedVer = localStorage.getItem("youtube_tabs_version");
-            if (storedVer != ver) {
-                localStorage.setItem("youtube_tabs_version", ver);
-                help();
-            }
+        subList = document.getElementById("sections").childNodes[1].childNodes[3];
+        if (subList == null) { return; } // If the guide hasn't been opened yet, it hasn't been populated with menu options or subscriptions, leading subList to be null
+
+        expandBtn = subList.childNodes[subList.childNodes.length-1].childNodes[1].childNodes[1];
+        expandBtn.click();
+        
+        clearInterval(check);
+        setupSubs();
+        
+        let ver = chrome.runtime.getManifest().version;
+        let storedVer = localStorage.getItem("youtube_tabs_version");
+        if (storedVer != ver) {
+            localStorage.setItem("youtube_tabs_version", ver);
+            help();
         }
     }, 100);
 }
@@ -102,6 +101,15 @@ function updateSubs(filter) {
     checkDarkMode();
 }
 
+function onPageUpdate() {
+    
+    getSubscribeButton(function(btn) {
+        if (btn != null) {
+            addSubscribeWidget(btn);
+        }
+    });
+}
+
 function addSubSlides(nodes) {
     for (index in nodes) {
         if (!nodes[index]) { continue; }
@@ -147,6 +155,13 @@ function addSubListeners(nodes) {
     }
 }
 
+function addSubscribeWidget(btn) {
+    let channelId = getMeta("channelId");
+    let subWidget = document.createElement("div"); subWidget.className = "sub-icon"; subWidget.id = channelId;
+    btn.childNodes[0].appendChild(subWidget);
+    subWidget.addEventListener("click", subMenu);
+}
+
 
 
 function subMenu(e) {
@@ -156,6 +171,7 @@ function subMenu(e) {
     e.stopPropagation();
     pulledMenu = document.createElement("div"); pulledMenu.className = "sub-menu";
     e.currentTarget.appendChild(pulledMenu);
+    if (e.currentTarget.className == "sub-icon") { pulledSub = e.currentTarget; } // Pretend the subscribe button widget is a pulled sub for this special case
     setupSubMenu();
 
     difference = {x:0, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2};
@@ -230,8 +246,10 @@ function tabMenu(e, edit) {
 function pullSub(e) {
     if (pulledMenu) { return }
     if (pulledSub) {
-        pulledSub.firstChild.style.left = "0px"
-        pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
+        if (pulledSub.className != "sub-icon") {
+            pulledSub.firstChild.style.left = "0px"
+            pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
+        }
     }
     pulledSub = e.currentTarget.firstChild
     pulledSub.firstChild.style.left = "40px"
@@ -243,6 +261,7 @@ function pullSub(e) {
 function pushSub(e) {
     e.stopPropagation()
     if (pulledSub) {
+        if (pulledSub.className == "sub-icon") { return; }
         pulledSub.firstChild.style.left = "0px"
         pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
         pulledSub.lastChild.style.backgroundColor = "white"
@@ -265,10 +284,12 @@ function moveSubToTab(e, id) {
         e.stopPropagation();
         tabId = parseInt(e.target.id);
     }
-
+    
+    closeMenu();
+    
     if (tabId != -1) {
         tabNodes[ subTabDict[tabId].index ].appendChild(pulledSub.parentElement);
-    } else {
+    } else if (pulledSub.className != "sub-icon") {
         widgetContainer.appendChild(pulledSub.parentElement);
     }
 
@@ -598,6 +619,7 @@ function setupSubMenu() {
     if (darkModeEnabled) { pulledMenu.classList.add("dark"); }
 
     // If this sub is already in a tab...
+    if (!pulledSub) { return; }
     if (subLinkDict[pulledSub.id] != -1) {
         removeFromTab = document.createElement("div"); removeFromTab.className = "menu-link"; removeFromTab.id = -1; removeFromTab.innerHTML = "REMOVE FROM TAB";
         removeFromTab.addEventListener('click', moveSubToTab);
@@ -727,6 +749,10 @@ function saveData() {
     localStorage.setItem("subscription_tabs", JSON.stringify(subTabDict));
 }
 
+function isSubscribed(subscribeBtn) {
+    return (subscribeBtn.childNodes[0].childNodes[1].childNodes[2].innerText == "SUBSCRIBED");
+}
+
 function getSubs(container, filterNew) {
     let newList = [];
     let nodes = Array.from(container.childNodes);
@@ -761,6 +787,36 @@ function getSubs(container, filterNew) {
 function getChannelID(node) {
     if (!(node.childNodes[1].href.includes("https://www.youtube.com/channel/"))) { return "" }
     return node.childNodes[1].href.replace("https://www.youtube.com/channel/", "")
+}
+
+function getSubscribeButton(callback) {
+    let tries = 0;
+    let check = setInterval(function() {
+        if (tries > 5) { clearInterval(check); }
+        let btns = document.querySelectorAll("[id='subscribe-button']");
+        let nodes = Array.from(btns);
+
+        for (index in nodes) {
+            console.log(nodes[index].className);
+            if (nodes[index].className.includes("ytd-c4-tabbed-header") || nodes[index].className.includes("ytd-video")) {
+                callback(nodes[index]);
+                clearInterval(check); return;
+            }
+        }
+        tries++;
+    }, 200)
+}
+
+function getMeta(metaName) {
+    const metas = document.getElementsByTagName('meta');
+  
+    for (let i = 0; i < metas.length; i++) {
+      if (metas[i].getAttribute('itemprop') === metaName) {
+        return metas[i].getAttribute('content');
+      }
+    }
+  
+    return '';
 }
 
 function getRandomInt(max) {
@@ -815,6 +871,9 @@ function insertAfter(referenceNode, newNode) {
 setInterval(function(){
     if (currentURL != window.location.href) {
         currentURL = window.location.href;
-        waitForPageLoad();
+        onPageUpdate();
     }
 }, 100);
+
+waitForPageLoad();
+onPageUpdate();

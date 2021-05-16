@@ -185,12 +185,15 @@
 }
 
 .sub-icon {
+    position: relative;
     width: 20px;
     height: 20px;
     margin: 10px;
     float: right;
     background-image: url("https://i.imgur.com/RfJCiU9.png");
     background-size: contain;
+} .sub-icon:hover {
+    cursor: pointer;
 }
 
 .sub-menu {
@@ -209,6 +212,8 @@
     box-sizing: border-box;
     border: solid 1px #ddd;
     border-radius: 2px;
+} .sub-menu:hover {
+    cursor: default;
 }
 
 .menu-link {
