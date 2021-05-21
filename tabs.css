@@ -184,7 +184,7 @@
     box-shadow: 3px 0 1px -3px white;
 }
 
-.sub-icon {
+.sub-icon, .sub-widget {
     position: relative;
     width: 20px;
     height: 20px;
@@ -192,7 +192,7 @@
     float: right;
     background-image: url("https://i.imgur.com/RfJCiU9.png");
     background-size: contain;
-} .sub-icon:hover {
+} .sub-widget:hover {
     cursor: pointer;
 }
 

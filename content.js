@@ -4,6 +4,7 @@ var currentURL = window.location.href;
 var scrollDist = 0;
 var darkModeEnabled = false;
 var userAgent = "";
+var loaded = false;
 
 var guide = document.getElementById("guide-content");
 var innerGuide = document.getElementById("guide-inner-content");
@@ -12,14 +13,20 @@ var pulledSub = null;
 var pulledMenu = null;
 var colorPicker = null;
 var helpMenu = null;
+var subscriptionWidgetPromise = null;
 
 var tabNodes = [];
-var subLinkDict = {};
-var subTabDict = {};
+var subLinkDict = JSON.parse(localStorage.getItem("subscription_links"));
+var subTabDict = JSON.parse(localStorage.getItem("subscription_tabs"));
 
 // Grab tab shared variables
 var subProps = {};
 var grabbedTab = null;
+
+
+// HIDE subscription widget if not subscribed. This prevents altering non-existent subscription slides
+// Get sub element by channel name if channel is not in href
+// HIDE subscription widget if guide has not been opened
 
 
 function waitForPageLoad() {
@@ -55,6 +62,7 @@ function waitForPageLoad() {
 
 function setupSubs() {
     console.log("[Youtube Tabs] LOADED")
+    loaded = true;
 
     // Allow overflow to make subs visible
     guide.style.overflow = "visible";
@@ -104,9 +112,7 @@ function updateSubs(filter) {
 function onPageUpdate() {
     
     getSubscribeButton(function(btn) {
-        if (btn != null) {
-            addSubscribeWidget(btn);
-        }
+        if (btn != null) { addSubscribeWidget(btn); }
     });
 }
 
@@ -120,7 +126,7 @@ function addSubSlides(nodes) {
         subSlide.appendChild(subIcon);
         sub.appendChild(subSlide);
         sub.appendChild(subCover);
-        sub.id = getChannelID(nodes[index]);
+        sub.id = getChannelIDFromNode(nodes[index]);
 
         nodes[index].style = "z-index: 1; overflow: visible;";
         nodes[index].appendChild(sub);
@@ -156,10 +162,18 @@ function addSubListeners(nodes) {
 }
 
 function addSubscribeWidget(btn) {
-    let channelId = getMeta("channelId");
-    let subWidget = document.createElement("div"); subWidget.className = "sub-icon"; subWidget.id = channelId;
+    if (btn.childNodes.length == 0) { return; }
+    if (subscriptionWidgetPromise) { clearInterval(subscriptionWidgetPromise); } // Shutdown any previous custom "watchForSubscribeChange" promises
+    let oldBtn = document.getElementsByClassName("sub-widget")[0]; if (oldBtn) { oldBtn.remove(); } // Remove any old subscribe widgets
+
+    let subWidget = document.createElement("div"); subWidget.className = "sub-widget";
+    getChannelIDFromPage(function(id) { subWidget.id = id}); // set ID after getting data from callback
+    
     btn.childNodes[0].appendChild(subWidget);
     subWidget.addEventListener("click", subMenu);
+
+    subscriptionWidgetPromise = watchForSubscribeChange(btn, adaptSubscribeWidget)
+    adaptSubscribeWidget(btn); // adapt subscribe widget for current subscription status
 }
 
 
@@ -171,7 +185,7 @@ function subMenu(e) {
     e.stopPropagation();
     pulledMenu = document.createElement("div"); pulledMenu.className = "sub-menu";
     e.currentTarget.appendChild(pulledMenu);
-    if (e.currentTarget.className == "sub-icon") { pulledSub = e.currentTarget; } // Pretend the subscribe button widget is a pulled sub for this special case
+    if (e.currentTarget.className == "sub-widget") { pulledSub = e.currentTarget; } // Pretend the subscribe button widget is a pulled sub for this special case
     setupSubMenu();
 
     difference = {x:0, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2};
@@ -246,7 +260,7 @@ function tabMenu(e, edit) {
 function pullSub(e) {
     if (pulledMenu) { return }
     if (pulledSub) {
-        if (pulledSub.className != "sub-icon") {
+        if (pulledSub.className != "sub-widget") {
             pulledSub.firstChild.style.left = "0px"
             pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
         }
@@ -261,7 +275,7 @@ function pullSub(e) {
 function pushSub(e) {
     e.stopPropagation()
     if (pulledSub) {
-        if (pulledSub.className == "sub-icon") { return; }
+        if (pulledSub.className == "sub-widget") { return; }
         pulledSub.firstChild.style.left = "0px"
         pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
         pulledSub.lastChild.style.backgroundColor = "white"
@@ -287,14 +301,29 @@ function moveSubToTab(e, id) {
     
     closeMenu();
     
-    if (tabId != -1) {
-        tabNodes[ subTabDict[tabId].index ].appendChild(pulledSub.parentElement);
-    } else if (pulledSub.className != "sub-icon") {
-        widgetContainer.appendChild(pulledSub.parentElement);
+    // If we're dealing with a subscription widget, skip appending it to a tab.
+    if (pulledSub.className != "sub-widget") {
+        if (tabId != -1) {
+            tabNodes[ subTabDict[tabId].index ].appendChild(pulledSub.parentElement);
+        } else {
+            widgetContainer.appendChild(pulledSub.parentElement);
+        }
+    } else {
+        subLinkDict[pulledSub.id] = tabId;
+        saveData();
+
+        updateSubs(true);
+        sortSub(tabId, pulledSub.id);
     }
 
     subLinkDict[pulledSub.id] = tabId;
     saveData();
+}
+
+function sortSub(tabId, subId) {
+    let sub = document.getElementById(subId).parentElement;
+    if (tabId != -1) { tabNodes[ subTabDict[tabId].index ].appendChild(sub); }
+    else { widgetContainer.appendChild(sub) }
 }
 
 function createTab(e) {
@@ -537,8 +566,11 @@ function help(e) {
 
         <br>
         <br>
-        <p>- Fixed Firefox dark mode compatibility issue
-        <p>- Fixed Firefox show/hide compatibility issue
+        <p>- Fixed tab selection panel not closing after selecting an option on Firefox</p>
+        <br>
+        <p>- Added subscription widget</p>
+        <br>
+        <p>- Known issue: subscriptions will replicate within the side-menu if you unsubscribe and resubsribe without refreshing</p>
         <br>
         <br>
 
@@ -718,7 +750,6 @@ function updateLightMode(nodes) {
 
     // first child (tab-menu) > edit third child (tab-menu-name)
     let tabs = document.getElementsByClassName("tab");
-    console.log(tabs);
     for (index in tabs) {
         if (!tabs[index].classList) { continue; } // ?????? I don't even know why this is necessary
         if (darkModeEnabled) {
@@ -740,6 +771,27 @@ function checkDarkMode() {
         darkModeEnabled = guideOnDarkMode;
         updateLightMode(getSubs(widgetContainer));
     }
+}
+
+// Given subscribe button, adapt the widget for your current subscription status
+function adaptSubscribeWidget(btn) {
+    let subWidget = document.getElementsByClassName("sub-widget")[0];
+    if (isSubscribed(btn) && loaded && subWidget.id != null) { // If we are subscribed, the side-menu has been loaded, and subWidget was given an ID
+        subWidget.style.display = "unset";
+    } else {
+        subWidget.style.display = "none";
+    }
+}
+
+function watchForSubscribeChange(btn, callback) {
+    let text = btn.childNodes[0].childNodes[1].childNodes[2].innerText;
+    let check = setInterval(function(){
+        if (text != btn.childNodes[0].childNodes[1].childNodes[2].innerText) {
+            callback(btn);
+        }
+        text = btn.childNodes[0].childNodes[1].childNodes[2].innerText;
+    }, 100);
+    return check;
 }
 
 
@@ -774,8 +826,10 @@ function getSubs(container, filterNew) {
 
         // If we want to filter out subs that already have the tab elements...
         if (filterNew) {
-            if (nodes[index].firstChild.className.includes("sub")) {
-                continue
+            if (nodes[index].firstChild.className != null) { // If this "node" has a class name. <!--css-build:shady--> durrrr
+                if (nodes[index].firstChild.className.includes("sub")) {
+                    continue
+                }
             }
         }
         newList.push(nodes[index]);
@@ -784,9 +838,27 @@ function getSubs(container, filterNew) {
     return newList;
 }
 
-function getChannelID(node) {
+function getChannelIDFromNode(node) {
     if (!(node.childNodes[1].href.includes("https://www.youtube.com/channel/"))) { return "" }
     return node.childNodes[1].href.replace("https://www.youtube.com/channel/", "")
+}
+
+async function getChannelIDFromPage(callback) {
+    // wait .5s to let page set
+    let check = setInterval(async function() {
+        if (window.location.href.includes("watch?")) { // If we are on a video page
+            let id = document.getElementsByClassName("yt-simple-endpoint style-scope ytd-video-owner-renderer")[0].href;
+            if (id.includes("https://www.youtube.com/channel/")) { id = id.replace("https://www.youtube.com/channel/", ""); }
+            else { id = ""; }
+
+            if (id != "") { callback(id); }
+        } else if (window.location.href.includes("https://www.youtube.com/channel/")) { // If we can get the channel id from the url
+            callback(window.location.href.replace("https://www.youtube.com/channel/", ""));
+        } else { // find meta channelId
+            console.warn("[Youtube Tabs] Unable to get channel ID. Disabling subscription widget...")
+        }
+        clearInterval(check);
+    }, 500);
 }
 
 function getSubscribeButton(callback) {
@@ -797,10 +869,12 @@ function getSubscribeButton(callback) {
         let nodes = Array.from(btns);
 
         for (index in nodes) {
-            console.log(nodes[index].className);
-            if (nodes[index].className.includes("ytd-c4-tabbed-header") || nodes[index].className.includes("ytd-video")) {
-                callback(nodes[index]);
-                clearInterval(check); return;
+            // Looked for ytd-video if this is a video (watch?) link and ytd-c4... if not
+            if ( nodes[index].className.includes( (window.location.href.includes("watch?")) ? "ytd-video" : "ytd-c4-tabbed-header") ) {
+                if (nodes[index].childNodes.length != 0) { // Empty check to ensure the subscription button has fully loaded before returning callback
+                    callback(nodes[index]);
+                    clearInterval(check); return;
+                }
             }
         }
         tries++;
