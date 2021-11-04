@@ -58,7 +58,13 @@ function waitForPageLoad() {
         clearInterval(check);
         setupSubs();
         
-        let ver = chrome.runtime.getManifest().version;
+        let ver = "";
+        try { ver = browser.runtime.getManifest().version; }
+        catch (e) {
+            try { ver = chrome.runtime.getManifest().version; }
+            catch (e) { console.log("[Youtube Tabs] Unable to get version from manifest"); }
+        }
+        
         let storedVer = localStorage.getItem("youtube_tabs_version");
         if (storedVer != ver) {
             localStorage.setItem("youtube_tabs_version", ver);
@@ -555,9 +561,11 @@ function interruptClick(e) {
 function help(e) {
     if (helpMenu) { return; }
     let ver = "";
-    try { ver = chrome.runtime.getManifest().version; }
-    catch (e) { console.log("[Youtube Tabs] Unable to get version from manifest"); }
-
+    try { ver = browser.runtime.getManifest().version; }
+    catch (e) {
+        try { ver = chrome.runtime.getManifest().version; }
+        catch (e) { console.log("[Youtube Tabs] Unable to get version from manifest"); }
+    }
     let poster = `
     <div class="poster">
         <div class="poster-close"></div>
