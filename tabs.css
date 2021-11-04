@@ -218,6 +218,9 @@
     box-sizing: border-box;
     border: solid 1px #ddd;
     border-radius: 2px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #888 #eee;
 } .sub-menu:hover {
     cursor: default;
 }
