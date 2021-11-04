@@ -7,7 +7,7 @@
 }
 
 .darken {
-    z-index: 999;
+    z-index: 2501;
     position: fixed;
     width: 100%;
     height: 100%;
@@ -22,18 +22,17 @@
   
 
 .poster {
-    z-index: 1000;
     position: absolute;
-    width: 30%;
-    height: 50%;
-    left: 40%; top: 25%;
+    width: 40%;
+    height: 60%;
+    left: 35%; top: 25%;
 
     overflow-y: scroll;
     overflow-x: hidden;
     text-align: center;
     padding: 10px;
     background-color: white;
-    border: solid 2px #ddd;
+    border: solid 2px gray;
     border-radius: 10px;
     font-size: 14px;
 
@@ -75,6 +74,13 @@
 } .poster-text {
     width: 80%;
     padding-left: 10%; padding-right: 10%;
+} .poster-change-notes {
+    text-align: left;
+    width: 75%;
+    margin: auto;
+} .poster-change-notes > p, .poster-change-notes > b {
+    display: block;
+    padding: 8px 0;
 }
 
 .info-btn {
@@ -203,7 +209,7 @@
     top: 0;
     left: 0;
     
-    z-index: 1;
+    z-index: 999;
     text-align: center;
     overflow-x: hidden;
 
@@ -218,11 +224,11 @@
 
 .menu-link {
     position: relative;
-    width: calc(100% - 10px);
+    width: calc(100% - 12px);
     font-size: 11px;
     color: #444;
     font-weight: 500;
-    padding: 5px;
+    padding: 6px;
     word-break: break-all;
     word-break: break-word;
 } .menu-link:hover {

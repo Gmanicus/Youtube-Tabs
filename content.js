@@ -28,6 +28,13 @@ var grabbedTab = null;
 // Get sub element by channel name if channel is not in href
 // HIDE subscription widget if guide has not been opened
 
+// ISSUE: Subscription elements can either carry the channel ID or a custom ID, such as "ImmortalSwings"
+// These will be different between sidepanel widgets and video creator widgets. The video creator widget will always maintain the
+// channel ID, while the sidepanel widget will hold a custom channel ID if they have it set.
+// Unfortunately, this also means that I cannot extrapolate the ID from the channel name, because it may be different.
+//
+// I may have to suspend this extension
+
 
 function waitForPageLoad() {
     check = setInterval(function(){
@@ -42,10 +49,10 @@ function waitForPageLoad() {
         // Get "Show # More" button (<a> element)
         // Click it
 
-        subList = document.getElementById("sections").childNodes[1].childNodes[3];
+        subList = document.querySelectorAll("#sections .style-scope #items")[1];
         if (subList == null) { return; } // If the guide hasn't been opened yet, it hasn't been populated with menu options or subscriptions, leading subList to be null
 
-        expandBtn = subList.childNodes[subList.childNodes.length-1].childNodes[1].childNodes[1];
+        expandBtn = document.querySelectorAll("a[title^='Show']")[2];  // find <a> element with title that BEGINS WITH 'Show'. This finds 4 buttons, two pairs of "Show more" and "Show less". The one controlling the subs list should be "Show ### more"
         expandBtn.click();
         
         clearInterval(check);
@@ -57,6 +64,8 @@ function waitForPageLoad() {
             localStorage.setItem("youtube_tabs_version", ver);
             help();
         }
+
+        onPageUpdate();
     }, 100);
 }
 
@@ -75,7 +84,7 @@ function setupSubs() {
         innerGuide.style.marginTop = scrollDist + "px";
     })
     // Get the sub widget container
-    widgetContainer = document.querySelectorAll('[id=items]')[1];
+    widgetContainer = document.querySelectorAll("#sections .style-scope #items")[1];
     widgetContainer.style.position = "relative";
     // Get the "show more" widget, reposition the subs from within it to the container, and delete the expandable widget
     expandableWidget = widgetContainer.childNodes[widgetContainer.childNodes.length-1];
@@ -110,7 +119,6 @@ function updateSubs(filter) {
 }
 
 function onPageUpdate() {
-    
     getSubscribeButton(function(btn) {
         if (btn != null) { addSubscribeWidget(btn); }
     });
@@ -321,7 +329,7 @@ function moveSubToTab(e, id) {
 }
 
 function sortSub(tabId, subId) {
-    let sub = document.getElementById(subId).parentElement;
+    let sub = document.querySelector(`.sub[id='${subId}']`).parentElement; // Get element with .sub class and id equal to our subscription
     if (tabId != -1) { tabNodes[ subTabDict[tabId].index ].appendChild(sub); }
     else { widgetContainer.appendChild(sub) }
 }
@@ -566,11 +574,11 @@ function help(e) {
 
         <br>
         <br>
-        <p>- Fixed tab selection panel not closing after selecting an option on Firefox</p>
-        <br>
-        <p>- Added subscription widget</p>
-        <br>
-        <p>- Known issue: subscriptions will replicate within the side-menu if you unsubscribe and resubsribe without refreshing</p>
+        <div class="poster-change-notes">
+            <p>- Fixed breaking issues caused by Youtube subscription IDs no longer being consistent</p>
+            <p>- Fixed more issues caused by a Youtube formatting update</p>
+            <b>Note: individual sub-widgets will reset if the content creator changes their channel name. Unfortunately, this can't be worked around, but thankfully it should be very rare</b>
+        </div>
         <br>
         <br>
 
@@ -618,7 +626,7 @@ function help(e) {
 
     darkContainer = document.createElement("div"); darkContainer.className = "darken"; darkContainer.innerHTML = poster;
     if (darkModeEnabled) { darkContainer.childNodes[1].classList.add("dark"); darkContainer.childNodes[1].classList.add("dark-menu-item"); }
-    document.body.appendChild(darkContainer);
+    document.body.prepend(darkContainer);
     
     helpMenu = darkContainer;
     document.getElementsByClassName("poster-close")[0].addEventListener("click", closeHelpMenu)
@@ -839,21 +847,21 @@ function getSubs(container, filterNew) {
 }
 
 function getChannelIDFromNode(node) {
-    if (!(node.childNodes[1].href.includes("https://www.youtube.com/channel/"))) { return "" }
-    return node.childNodes[1].href.replace("https://www.youtube.com/channel/", "")
+    let channelName = node.getElementsByClassName("title")[0].innerHTML;
+    return channelName; // channel IDs are either custom channel names or auto-generated IDs. I.e, they are inconsistent and can no longer be used
 }
 
 async function getChannelIDFromPage(callback) {
     // wait .5s to let page set
     let check = setInterval(async function() {
         if (window.location.href.includes("watch?")) { // If we are on a video page
-            let id = document.getElementsByClassName("yt-simple-endpoint style-scope ytd-video-owner-renderer")[0].href;
-            if (id.includes("https://www.youtube.com/channel/")) { id = id.replace("https://www.youtube.com/channel/", ""); }
-            else { id = ""; }
+            let id = document.querySelector("#upload-info[class*='style-scope']").querySelector("a").innerHTML;
+            console.log(id);
 
             if (id != "") { callback(id); }
         } else if (window.location.href.includes("https://www.youtube.com/channel/")) { // If we can get the channel id from the url
-            callback(window.location.href.replace("https://www.youtube.com/channel/", ""));
+            let id = document.getElementById("inner-header-container").querySelector("#text").innerHTML;
+            callback(id);
         } else { // find meta channelId
             console.warn("[Youtube Tabs] Unable to get channel ID. Disabling subscription widget...")
         }
@@ -869,7 +877,7 @@ function getSubscribeButton(callback) {
         let nodes = Array.from(btns);
 
         for (index in nodes) {
-            // Looked for ytd-video if this is a video (watch?) link and ytd-c4... if not
+            // Look for ytd-video if this is a video (watch?) link and if not, ytd-c4
             if ( nodes[index].className.includes( (window.location.href.includes("watch?")) ? "ytd-video" : "ytd-c4-tabbed-header") ) {
                 if (nodes[index].childNodes.length != 0) { // Empty check to ensure the subscription button has fully loaded before returning callback
                     callback(nodes[index]);
@@ -950,4 +958,3 @@ setInterval(function(){
 }, 100);
 
 waitForPageLoad();
-onPageUpdate();
