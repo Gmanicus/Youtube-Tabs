@@ -163,6 +163,8 @@
     position: absolute;
     height: 100%;
     width: 100%;
+} ytd-guide-entry-renderer:hover > .sub > .sub-slide {
+    left: 40px;
 }
 
 .sub-slide {

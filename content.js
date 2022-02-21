@@ -82,13 +82,14 @@ function setupSubs() {
     // Allow overflow to make subs visible
     guide.style.overflow = "visible";
     innerGuide.style.overflow = "visible";
-    innerGuide.style.transition = "all 0.05s ease-out";
+    innerGuide.style.transition = "margin-top 0.1s linear";
     innerGuide.addEventListener("wheel", function(e) {
         if (pulledMenu) { return }
-        scrollDist -= e.deltaY;
+        scrollDist -= e.deltaY * 0.75;
         scrollDist = Math.min(Math.max(scrollDist, -innerGuide.offsetHeight + window.innerHeight), 0);
         innerGuide.style.marginTop = scrollDist + "px";
     })
+
     // Get the sub widget container
     widgetContainer = document.querySelectorAll("#sections .style-scope #items")[1];
     widgetContainer.style.position = "relative";
@@ -119,6 +120,35 @@ function setupSubs() {
 
 function updateSubs(filter) {
     widgets = getSubs(widgetContainer, filter);
+    if (!widgets) { return; }
+
+
+    // Sort the widgets by
+    // >>>  Tab Index
+    // >>   Status
+    // >    Name
+    widgets.sort((a, b) => {
+        aID = getChannelIDFromNode(a); bID = getChannelIDFromNode(b);
+        aTabIndex = -1; bTabIndex = -1;
+        aStatus = (a.getAttribute("line-end-style") != "none") ? 1 : 0;
+        bStatus = (b.getAttribute("line-end-style") != "none") ? 1 : 0;
+        if (aID in subLinkDict) {
+            if (subLinkDict[aID] != -1 && subTabDict[subLinkDict[aID]] != undefined) {
+                aTabIndex = subTabDict[ subLinkDict[aID] ].index;
+            }
+        } if (bID in subLinkDict) {
+            if (subLinkDict[bID] != -1 && subTabDict[subLinkDict[bID]] != undefined) {
+                bTabIndex = subTabDict[ subLinkDict[bID] ].index;
+            }
+        }
+
+        if (aTabIndex < bTabIndex) { return 1; }        // If a index is lower than b index, +1
+        else if (aTabIndex > bTabIndex) { return -1; }  // If a index is higher than b index, -1
+        else if (aStatus < bStatus) { return 1; }       // If a status is less active than b status, +1
+        else if (aStatus > bStatus) { return -1; }       // If a status is more active than b status, -1
+        else { return aID.localeCompare(bID); }             // Compare IDs
+    })
+
     addSubSlides(widgets);
     addSubListeners(widgets);
     checkDarkMode();
@@ -170,8 +200,8 @@ function addSubListeners(nodes) {
     // Close sub button if we mouse out of the 'items' div
     widgetContainer.addEventListener('mouseout', pushSub)
     for (index in nodes) {
-        nodes[index].addEventListener('mouseover', pullSub)
-        nodes[index].firstChild.addEventListener('mouseout', pushSub)
+        // nodes[index].addEventListener('mouseover', pullSub)
+        nodes[index].firstChild.addEventListener('click', pullSub)
     }
 }
 
@@ -201,6 +231,8 @@ function subMenu(e) {
     e.currentTarget.appendChild(pulledMenu);
     if (e.currentTarget.className == "sub-widget") { pulledSub = e.currentTarget; } // Pretend the subscribe button widget is a pulled sub for this special case
     setupSubMenu();
+
+    console.log("pulled sub:", pulledSub);
 
     difference = {x:0, y:-pulledMenu.offsetHeight/2 + e.currentTarget.offsetHeight/2};
     pulledMenu.style.left = difference.x + e.currentTarget.offsetWidth + "px";
@@ -272,28 +304,31 @@ function tabMenu(e, edit) {
 
 
 function pullSub(e) {
+    e.stopPropagation()
     if (pulledMenu) { return }
-    if (pulledSub) {
-        if (pulledSub.className != "sub-widget") {
-            pulledSub.firstChild.style.left = "0px"
-            pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
-        }
-    }
-    pulledSub = e.currentTarget.firstChild
-    pulledSub.firstChild.style.left = "40px"
-    pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px gray"
-    pulledSub.lastChild.style.backgroundColor = "#ededed"
-    pulledSub.addEventListener('click', subMenu)
+    // if (pulledSub) {
+    //     if (pulledSub.className != "sub-widget") {
+    //         pulledSub.firstChild.style.left = "0px"
+    //         pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
+    //     }
+    // }
+    pulledSub = e.currentTarget;
+
+    console.log("pulled sub:", pulledSub);
+    // pulledSub.firstChild.style.left = "40px"
+    // pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px gray"
+    // pulledSub.lastChild.style.backgroundColor = "#ededed"
+    subMenu(e);
 }
 
 function pushSub(e) {
     e.stopPropagation()
     if (pulledSub) {
         if (pulledSub.className == "sub-widget") { return; }
-        pulledSub.firstChild.style.left = "0px"
-        pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
-        pulledSub.lastChild.style.backgroundColor = "white"
-        pulledSub.removeEventListener('click', subMenu)
+        // pulledSub.firstChild.style.left = "0px"
+        // pulledSub.lastChild.style.boxShadow = "3px 0 1px -3px white"
+        // pulledSub.lastChild.style.backgroundColor = "white"
+        // pulledSub.removeEventListener('click', subMenu)
     }
 }
 
@@ -576,15 +611,17 @@ function help(e) {
         <br>
         <h1>Youtube Tabs</h1>
         <br>
-        <h5>Created by Grant @ Geek Overdrive Studio</h5>
+        <h5>Created by Grant @ Geek Overdrive</h5>
         <br>
         <h3>${ver} Update</h3>
 
         <br>
         <br>
         <div class="poster-change-notes">
-            <p>- Fixed breaking issues caused by Youtube subscription IDs no longer being consistent</p>
-            <p>- Fixed more issues caused by a Youtube formatting update</p>
+            <p>- The subscription widgets are now sorted by tab, status, and index. So, channels with new uploads are sorted to the top and all are sorted A-Z</p>
+            <p>- Made the side-panel more performant by removing on-click handlers that changed style options. This is now handled by CSS. Not sure why I didn't do that in the first place</p>
+            <p>- Fixed an issue where you could not use the Subscribe widget on channel pages</p>
+            <p>- Fixed an issue where the Subscribe widget would not be removed if the channel ID could not be found</p>
             <b>Note: individual sub-widgets will reset if the content creator changes their channel name. Unfortunately, this can't be worked around, but thankfully it should be very rare</b>
         </div>
         <br>
@@ -804,6 +841,11 @@ function watchForSubscribeChange(btn, callback) {
     let check = setInterval(function(){
         if (text != btn.childNodes[0].childNodes[1].childNodes[2].innerText) {
             callback(btn);
+
+            let waitAndUpdate = setInterval(function() {
+                updateLightMode(getSubs(widgetContainer));  // Update light mode in case new subscription was added (white bg by default)
+                clearInterval(waitAndUpdate);
+            }, 500);
         }
         text = btn.childNodes[0].childNodes[1].childNodes[2].innerText;
     }, 100);
@@ -867,11 +909,12 @@ async function getChannelIDFromPage(callback) {
             console.log(id);
 
             if (id != "") { callback(id); }
-        } else if (window.location.href.includes("https://www.youtube.com/channel/")) { // If we can get the channel id from the url
+        } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/")) { // If we are on a channel page
             let id = document.getElementById("inner-header-container").querySelector("#text").innerHTML;
             callback(id);
-        } else { // find meta channelId
-            console.warn("[Youtube Tabs] Unable to get channel ID. Disabling subscription widget...")
+        } else {
+            console.warn("[Youtube Tabs] Unable to get channel ID. Disabling subscription widget...");
+            let subWidget = document.getElementsByClassName("sub-widget")[0]; if (subWidget) { subWidget.remove(); } // Remove any subscribe widgets
         }
         clearInterval(check);
     }, 500);
