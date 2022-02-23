@@ -53,6 +53,7 @@ function waitForPageLoad() {
         if (subList == null) { return; } // If the guide hasn't been opened yet, it hasn't been populated with menu options or subscriptions, leading subList to be null
 
         expandBtn = document.querySelectorAll("a[title^='Show']")[2];  // find <a> element with title that BEGINS WITH 'Show'. This finds 4 buttons, two pairs of "Show more" and "Show less". The one controlling the subs list should be "Show ### more"
+        if (!expandBtn) { expandBtn = document.querySelectorAll("a[title^='Show']")[0]; }   // EXCEPT when the user does not have any saved playlist! In that case, this only finds 2 buttons, with the first being "Show ### more"
         expandBtn.click();
         
         clearInterval(check);
@@ -622,6 +623,7 @@ function help(e) {
             <p>- Made the side-panel more performant by removing on-click handlers that changed style options. This is now handled by CSS. Not sure why I didn't do that in the first place</p>
             <p>- Fixed an issue where you could not use the Subscribe widget on channel pages</p>
             <p>- Fixed an issue where the Subscribe widget would not be removed if the channel ID could not be found</p>
+            <p>- Fixed a critical bug where Youtube Tabs literally would not work if you did not have any saved playlists. Sorry new users</p>
             <b>Note: individual sub-widgets will reset if the content creator changes their channel name. Unfortunately, this can't be worked around, but thankfully it should be very rare</b>
         </div>
         <br>
