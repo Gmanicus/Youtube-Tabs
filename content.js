@@ -6,8 +6,8 @@ var darkModeEnabled = false;
 var userAgent = "";
 var loaded = false;
 
-var guide = document.getElementById("guide-content");
-var innerGuide = document.getElementById("guide-inner-content");
+var guide = null;
+var innerGuide = null;
 var widgetContainer = null;
 var pulledSub = null;
 var pulledMenu = null;
@@ -23,24 +23,14 @@ var subTabDict = JSON.parse(localStorage.getItem("subscription_tabs"));
 var subProps = {};
 var grabbedTab = null;
 
-
-// HIDE subscription widget if not subscribed. This prevents altering non-existent subscription slides
-// Get sub element by channel name if channel is not in href
-// HIDE subscription widget if guide has not been opened
-
-// ISSUE: Subscription elements can either carry the channel ID or a custom ID, such as "ImmortalSwings"
-// These will be different between sidepanel widgets and video creator widgets. The video creator widget will always maintain the
-// channel ID, while the sidepanel widget will hold a custom channel ID if they have it set.
-// Unfortunately, this also means that I cannot extrapolate the ID from the channel name, because it may be different.
-//
-// I may have to suspend this extension
-
-
 function waitForPageLoad() {
     check = setInterval(function(){
         if (document.getElementsByClassName("tab").length > 0) { return; } // If we already have set tabs
         if (!document.getElementById("contentContainer").getAttribute("opened") == null) { return; } // If the side menu has not been opened yet
         if (!document.getElementById("sections")) { return; } // If the sections have not been populated yet
+
+        guide = document.getElementById("guide-content");
+        innerGuide = document.getElementById("guide-inner-content");
 
         // Get browser agent
         userAgent = navigator.userAgent;
@@ -52,8 +42,8 @@ function waitForPageLoad() {
         subList = document.querySelectorAll("#sections .style-scope #items")[1];
         if (subList == null) { return; } // If the guide hasn't been opened yet, it hasn't been populated with menu options or subscriptions, leading subList to be null
 
-        expandBtn = document.querySelectorAll("a[title^='Show']")[2];  // find <a> element with title that BEGINS WITH 'Show'. This finds 4 buttons, two pairs of "Show more" and "Show less". The one controlling the subs list should be "Show ### more"
-        if (!expandBtn) { expandBtn = document.querySelectorAll("a[title^='Show']")[0]; }   // EXCEPT when the user does not have any saved playlist! In that case, this only finds 2 buttons, with the first being "Show ### more"
+        expandBtn = document.querySelectorAll("#expander-item")[1];  // find all expander items. This finds 2 matches, the parent of "Show more", and the parent of "Show ### more"
+        if (!expandBtn) { expandBtn = document.querySelectorAll("#expander-item")[0]; }   // EXCEPT when the user does not have any saved playlists! In that case, this only finds 2 matches, with the 2nd being "Show ### more"
         expandBtn.click();
         
         clearInterval(check);
@@ -619,11 +609,7 @@ function help(e) {
         <br>
         <br>
         <div class="poster-change-notes">
-            <p>- The subscription widgets are now sorted by tab, status, and index. So, channels with new uploads are sorted to the top and all are sorted A-Z</p>
-            <p>- Made the side-panel more performant by removing on-click handlers that changed style options. This is now handled by CSS. Not sure why I didn't do that in the first place</p>
-            <p>- Fixed an issue where you could not use the Subscribe widget on channel pages</p>
-            <p>- Fixed an issue where the Subscribe widget would not be removed if the channel ID could not be found</p>
-            <p>- Fixed a critical bug where Youtube Tabs literally would not work if you did not have any saved playlists. Sorry new users</p>
+            <p>- Youtube Tabs no longer relies on English to work
             <b>Note: individual sub-widgets will reset if the content creator changes their channel name. Unfortunately, this can't be worked around, but thankfully it should be very rare</b>
         </div>
         <br>

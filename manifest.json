@@ -1,7 +1,7 @@
 {
   "name": "Youtube Tabs",
   "description": "Tidy up your Youtube subscription list with tab organization features",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "manifest_version": 3,
   "icons": {
     "128": "icon.png",
