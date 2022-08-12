@@ -23,6 +23,616 @@ var subTabDict = JSON.parse(localStorage.getItem("subscription_tabs"));
 var subProps = {};
 var grabbedTab = null;
 
+window.onload = function() {
+    let waitForGuide = setInterval(()=>{
+        // Get guide button, dispatch 'yt-guide-hover', causing the guide to load
+        let guideBtn = document.getElementById("guide-button");
+        if (!guideBtn) return;
+        else clearInterval(waitForGuide);
+        guideBtn.dispatchEvent(new CustomEvent("yt-guide-hover", { bubbles: true }));
+
+        let waitForSections = setInterval(()=>{
+            let guideSections = document.getElementsByTagName("ytd-guide-section-renderer");
+            if (guideSections.length < 2) return;
+            else clearInterval(waitForSections);
+
+            // Get the 'Show more' subscriptions button in the guide and click it, causing the subscriptions to load
+            let showMoreSubscriptions = guideSections[1].querySelector("#expander-item");
+            showMoreSubscriptions.click();
+
+            new TabManager();
+        }, 100)
+    }, 100)
+}
+
+Object.nonFunctionKeys = (obj) => {
+    return Object.keys(obj).filter((key) => typeof obj[key] != "function")
+}
+
+class TabManager {
+
+    // Modal is an attribute that can be used to darken the content of the page to display a form over it
+    _modal = false;
+
+    set modal(value) {
+        this._modal = value;
+        if (value) { // If we are enabling modal, add the modal class to the page content and add a listener to close the active menu when it is clicked
+            let content = document.getElementById("page-manager");
+            content.classList.add("modal");
+
+            content.addEventListener("click", () => { if (this.modal) this.activeMenu?.close(); })
+        } else document.getElementById("page-manager").classList.remove("modal");
+    }
+
+    get modal() { return this._modal; }
+
+    constructor() {
+        this.badgeTabAssociations = JSON.parse(localStorage.getItem("subscription_links"));
+        this.badgeTabs = JSON.parse(localStorage.getItem("subscription_tabs"));
+
+        // Retrieve version stored in the manifest
+        this.version = null;
+        try { this.version = browser.runtime.getManifest().version; }
+        catch (e) {
+            try { ver = chrome.runtime.getManifest().version; }
+            catch (e) { this.logMessage("info", "Unable to get version from manifest") }
+        }
+        
+        // Update the version stored in localStorage
+        if (localStorage.getItem("youtube_tabs_version") != this.version) {
+            localStorage.setItem("youtube_tabs_version", this.version);
+            // help();
+        }
+
+        if (this.version) this.logMessage("info", `Running version ${this.version}`)
+
+        // Elements
+        this.sidePanel = document.getElementById("guide-content");
+        this.sidePanelTrack = document.getElementById("guide-inner-content");
+        this.badgeContainer = this.sidePanel.querySelectorAll("#items")[1];
+        this.badgeHeader = this.createAndConfigureElement("div", { className: "badge-header" });
+        this.newTab = this.createAndConfigureElement("span", {
+            className: "btn",
+            title: "New Tab",
+            style: { backgroundImage: "url('https://i.imgur.com/zggQshn.png')" },
+            event: { name: "click", callback: this.createNewTab.bind(this) }
+        });
+        this.info = this.createAndConfigureElement("span", {
+            className: "btn",
+            title: "Help/Info",
+            style: { backgroundImage: "url('https://i.imgur.com/9RJ5eKQ.png')" },
+            event: { name: "click", callback: this.help.bind(this) }
+        });
+
+        // Variables
+        this.scrollDistance = 0;
+        this.tabIndex = [];
+        this.tabs = [];
+        this.badges = [];
+        this.modal = false;
+
+        this.reformatGuide();
+        this.initializeTabs();
+        this.initializeBadges();
+        this.initializeFeedImprover();
+        this.initializeSubListener();
+    }
+
+    logMessage(level, ...msg) {
+        switch (level) {
+            case "error":   { console.error("[Youtube Tabs]", ...msg); break; }
+            case "warn":    { console.warn("[Youtube Tabs]", ...msg); break; }
+            default:        { console.log("[Youtube Tabs]", ...msg); break; }
+        }
+    }
+
+    /** Changes some styling for the guide (the left side-panel) to make it 'Youtube Tabs accessible'
+      *
+    **/
+    reformatGuide() {
+        this.setStyle(this.sidePanel, { overflow: "visible" });
+        this.setStyle(this.sidePanelTrack, { overflow: "visible", transition: "margin-top 0.1s linear" });
+        // Update with ScrollTop or ScrollTo? https://stackoverflow.com/questions/635706/how-to-scroll-to-an-element-inside-a-div
+        this.sidePanelTrack.addEventListener("wheel", (e) => {
+            if (this.modal) return; // If modal (some other menu is in focus), don't scroll the side-bar
+            this.scrollDistance -= e.deltaY * 0.75;
+            this.scrollDistance = Math.min(Math.max(this.scrollDistance, -this.sidePanelTrack.offsetHeight + window.innerHeight), 0);
+            this.sidePanelTrack.style.marginTop = this.scrollDistance + "px";
+            this.showBadges();
+        })
+
+        this.setStyle(this.badgeContainer, { position: "relative" });
+        // Move the elements from the 'expanded items' container to the badgeContainer
+        moveElementsTo(this.badgeContainer, ...this.badgeContainer.querySelector("#expandable-items").children);
+        this.badgeContainer.getElementsByTagName("ytd-guide-collapsible-entry-renderer")[0].remove(); // Remove the 'expander item' element so that the badgeContainer only contains subscription badges
+
+        // Add widgets to the 'Subscriptions' header
+        this.badgeHeader.appendChild(this.badgeContainer.parentElement.children[0]);
+        this.badgeHeader.appendChild(this.createAndConfigureElement("span", { className: "badge-header-controls" }));
+        this.badgeHeader.controls = this.badgeHeader.lastChild;
+        this.badgeHeader.text = this.badgeHeader.firstChild;
+
+        this.badgeHeader.controls.appendChild(this.info);
+        this.badgeHeader.controls.appendChild(this.newTab);
+        this.badgeContainer.parentElement.insertBefore(this.badgeHeader, this.badgeContainer);
+    }
+
+    initializeTabs() {
+        // Create tabs in ascending order by index
+        Object.nonFunctionKeys(this.badgeTabs).sort((keyA, keyB)=>{return this.badgeTabs[keyA].index - this.badgeTabs[keyB].index}).forEach((id)=>{
+            let tab = this.badgeTabs[id];
+            this.createTab(tab.name, id, tab.color, tab.hidden).moveToBottom();
+        })
+
+        // Insert tab at index
+        // ...append tab
+        this.badgeTabs.insert = (tab, index) => {
+            let constrainedIndex = Math.min(index, 0); // Constrain the index so it is always within possible range
+
+            let updateIndex = this.tabIndex.findIndex((id) => id == tab.id);
+            let updateInPlace = (updateIndex != -1) ? true : false;
+
+            if (updateInPlace) {
+                // Remove current tab id item
+                // Insert tab id item at new desired index
+                this.tabIndex.splice(updateIndex, 1);
+                this.tabIndex.splice(index, 0, tab.id);
+            } else {
+                // Insert new tab id item at new desired index
+                this.tabIndex.splice(constrainedIndex, 0, tab.id);
+            }
+
+            this.badgeTabs.update(tab);
+
+            // Update all indexes
+            Object.nonFunctionKeys(this.badgeTabs).forEach((id) => {
+                this.badgeTabs[id].index = this.tabIndex.findIndex((index_id) => index_id == id);
+            })
+
+            // Reorder tab elements
+            Object.nonFunctionKeys(this.badgeTabs).sort((keyA, keyB)=>{return this.badgeTabs[keyA].index - this.badgeTabs[keyB].index}).forEach((id)=>{
+                this.tabs.find((tab) => tab.id == id)?.moveToBottom();
+            })
+
+            this.save();
+        }
+
+        // Update tabs in storage
+        this.badgeTabs.update = (tab) => {
+            // If tab is already in the database list, update it
+            if (Object.nonFunctionKeys(this.badgeTabs).find((id) => id == tab.id)) {
+                Object.assign(this.badgeTabs[tab.id], {
+                    name: tab.title,
+                    color: tab.color,
+                    hidden: tab.closed,
+                    index: this.tabIndex.findIndex((id) => id == tab.id)
+                })
+            // If not, add it
+            } else {
+                this.badgeTabs[tab.id] = {
+                    name: tab.title,
+                    color: tab.color,
+                    hidden: tab.closed,
+                    index: this.tabIndex.findIndex((id) => id == tab.id)
+                }
+            }
+
+            this.save();
+        }
+
+        this.badgeTabs.delete = (tab) => {
+            delete this.badgeTabs[tab.id];
+            this.tabs.splice(this.tabs.findIndex((tabItem) => tabItem.id == tab.id), 1);
+            this.tabIndex.splice(this.tabIndex.findIndex((idItem) => idItem == tab.id), 1);
+                
+            // Remove all badge tab associations to this tab
+            for (const [key, value] of Object.entries(this.badgeTabAssociations)) { if (value == tab.id) this.badgeTabAssociations[key] = -1; }
+            this.save();
+        }
+    }
+
+    initializeBadges() {
+        this.badges = this.badgeContainer.querySelectorAll("ytd-guide-entry-renderer");
+        this.badges.forEach((badge)=>{
+            badge.id = this.getChannelIDFromBadge(badge);
+            badge.classList.add("badge")
+            switch (badge.getAttribute("line-end-style")) {
+                case "none": badge.status = 0; break;
+                case "dot": badge.status = 1; break;
+                case "badge": badge.status = 2; break;
+            }
+
+            // Add badge menu button
+            badge.appendChild(this.createAndConfigureElement("button", {className: "badge-retractor", event: { name: "click", callback: (e)=>{
+                e.stopImmediatePropagation();
+                this.badgeOptions(badge);
+            }}}));
+
+            // Add badge functions
+            // • moveTo: move this badge to a specific tab and save it
+            badge.moveTo = (tabID) => {
+                let association = this.badgeTabAssociations[badge.id];
+                if (!tabID) { this.logMessage("error", "Badge.moveTo() tab ID doesn't exist!", badge.id, tabID); return; }
+                else if (tabID != -1 && !document.getElementById(tabID)) { this.logMessage("error", "Badge.moveTo() tab not found!", tabID); return; }
+
+                // Set badge tab association to target tab
+                if (tabID == -1) this.logMessage("info", `Removing badge '${badge.id}' from tab ${association}`);
+                else if (association) this.logMessage("info", `Badge '${badge.id}' moving from ${association} to ${tabID}`);
+                else this.logMessage("info", `Badge '${badge.id}' moving to ${tabID}`);
+                
+                this.badgeTabAssociations[badge.id] = tabID;
+                this.save();
+
+                if (tabID != -1) {
+                    // Get badge list from target tab, insert the target badge, sort
+                    let newSiblings = document.getElementById(tabID).querySelectorAll(".badge");
+                    let family = Array.from(newSiblings); family.push(badge);
+                    let sortedFamily = this.sortBadges(family);
+                    let newIndex = sortedFamily.findIndex(item => { return item.id == badge.id } );
+
+                    // insert target badge into tab at sorted index, save
+                    if (newIndex == 0) document.getElementById(tabID).insertBefore(badge, sortedFamily[1]);
+                    else insertAfter(sortedFamily[newIndex-1], badge);
+                } else {
+                    this.sortBadges();
+                    this.arrangeBadges
+                }
+
+                // Close the badge options menu if there is one
+                if (badge.menu) badge.menu.close();
+            }
+
+            badge.lock = () => {
+                // Disable pointer events until the menu is closed to prevent badge from being interacted with
+                // And highlight this badge
+                this.setStyle(badge, { pointerEvents: "none" });
+                badge.setAttribute("active", "");
+            }
+
+            badge.unlock = () => {
+                this.setStyle(badge, { pointerEvents: "all" });
+                badge.removeAttribute("active");
+            }
+        })
+
+        this.sortBadges();
+        this.arrangeBadges();
+    }
+
+    // After scrolling through your feed, Youtube's performance will reduce drastically
+    // This function watches the feed and hides items outside the viewport to improve performance
+    initializeFeedImprover() {
+        let feed_container = document.getElementById("contents");
+
+        let options = {
+            // root: ,
+            rootMargin: '0px',
+            threshold: 0
+        }
+        
+        let observer = new IntersectionObserver((seen) => {
+            seen.forEach((item) => {
+                if (item.isIntersecting) item.target.style = null;
+                else item.target.style.visibility = "hidden";
+            })
+        }, options);
+
+        // Sick observer on all feed items that are not already observed every interval
+        setInterval(() => {
+            if (!feed_container) feed_container = document.getElementById("contents");
+            Array.from(feed_container.children).forEach((child)=>{
+                if (child.classList.contains("observed") || child.tagName.toLowerCase() == "ytd-continuation-item-renderer") return;
+                observer.observe(child);
+                child.classList.add("observed");
+            })
+        }, 1000)
+    }
+
+    initializeSubListener() {
+        // Handle new sub
+        // Handle removed sub
+        document.addEventListener("yt-subscription-changed", () => {
+            this.logMessage("info", "HEY, WE CHANGED A SUBSCRIPTION!")
+        })
+    }
+
+    // ACTIONS
+
+    sortBadges(badgeList) {
+        let setMaster = false;
+        if (badgeList == undefined || badgeList.length == 0) { badgeList = this.badges; setMaster = true; }
+        badgeList = Array.from(badgeList).sort((badge1, badge2)=>{
+            let badge1TabIndex = this.badgeTabs[this.badgeTabAssociations[badge1.id]]?.index + 1 || Infinity;
+            let badge2TabIndex = this.badgeTabs[this.badgeTabAssociations[badge2.id]]?.index + 1 || Infinity;
+            
+            // Sort the widgets by
+            // TODO: >>>> Favorited
+            // >>>  Tab Index
+            // >>   Status
+            // >    Name
+            if (badge1TabIndex != badge2TabIndex) return badge1TabIndex - badge2TabIndex;
+            else if (badge1.status != badge2.status) return badge2.status - badge1.status;
+            else return badge1.id.localeCompare(badge2.id);
+        })
+        
+        if (setMaster) this.badges = badgeList;
+        else return badgeList;
+    }
+
+    // In the currently sorted order, add badges to their respective tabs
+    arrangeBadges() {
+        this.badges.forEach((badge)=>{
+            let tab = this.tabs.find((tab)=>{ return tab.id == this.badgeTabAssociations[badge.id] }) // Get the tab element that this badge belongs in
+            if (tab) tab.appendChild(badge); // If that tab exists, append the badge to the tab
+            else this.badgeContainer.appendChild(badge); // If not, append the badge to the container
+        })
+    }
+
+    showBadges() {
+        // let time = new Date();
+        let visibleBadges = Array.from(this.badges).filter((badge)=>{ return this.isInViewport(badge) && !badge.classList.contains("shown"); });
+        visibleBadges.sort((badge1, badge2)=>{
+            let index1 = this.badges.findIndex((badge)=>{ return badge.id == badge1.id });
+            let index2 = this.badges.findIndex((badge)=>{ return badge.id == badge2.id });
+            if (index1 > index2) return 1;
+            else return -1;
+        })
+
+        visibleBadges.forEach((badge, i)=>{
+            // console.log(`Badge ${i} updated: ${((new Date() - time) / 1000).toFixed(4)}s`)
+            badge.style.animationDelay = `${i * 0.1}s`; // console.log(badge.style.animationDelay);
+            badge.className += " shown"
+        })
+        // console.log(`Done after: ${((new Date() - time) / 1000).toFixed(4)}s`)
+    }
+
+    createTab(title, id, color = "firebrick", hidden = false) {
+        // Create and configure tab, tab header, and tab controls
+        let newTab = this.createAndConfigureElement("div", {
+            className: "tab " + ((hidden) ? "closed" : ""),
+            title: title,
+            id: id,
+            style: { borderColor: color },
+            color: color,
+            closed: hidden
+        });
+
+        // Register tab events
+        newTab.getName = () => title;
+        newTab.setName = (name) => { newTab.title = name; newTab.getElementsByClassName("tab-menu-name")[0].innerHTML = name.toUpperCase(); }
+
+        // Darkmode
+
+        // Tab positioning methods
+        newTab.moveToBottom = () => {
+            let lastTab = [...this.badgeContainer.getElementsByClassName("tab")].pop();
+            if (lastTab) insertAfter(lastTab, newTab);
+            else this.badgeContainer.insertBefore(newTab, this.badgeContainer.firstChild);
+        }
+
+        newTab.moveToTop = () => {
+            this.badgeContainer.insertBefore(newTab, this.badgeContainer.firstChild);
+        }
+
+        // Delete tab method
+        newTab.delete = () => {
+            if (confirm("Are you sure?")) {
+                this.badgeTabs.delete(newTab);
+                newTab.remove();
+                this.sortBadges();
+                this.arrangeBadges();
+            }
+        }
+
+        newTab.toggle = () => {
+            newTab.classList.toggle("closed");
+            newTab.closed = newTab.classList.contains("closed")
+            this.badgeTabs.update(newTab);
+        }
+
+        // Configure tab elements
+        newTab.header = this.createAndConfigureElement("div", {className: "tab-menu"});
+        newTab.edit = this.createAndConfigureElement("button", {className: "tab-menu-btn edit-back", event: { name: "click", callback: this.tabOptions.bind(this, newTab) }});
+        newTab.delete = this.createAndConfigureElement("button", {className: "tab-menu-btn delete-back", event: { name: "click", callback: newTab.delete }});
+        newTab.expand = this.createAndConfigureElement("button", {className: "tab-menu-btn expand-arrow", event: { name: "click", callback: newTab.toggle }});
+        newTab.grab = this.createAndConfigureElement("button", {className: "tab-menu-btn grab", event: { name: "mousedown", callback: ()=>{} }});
+        
+        moveElementsTo(newTab.header, ...[newTab.edit, newTab.delete, newTab.expand, newTab.grab]);
+        newTab.header.appendChild(this.createAndConfigureElement("h3", {innerHTML: title?.toUpperCase() || "", className: "tab-menu-name"}));
+        newTab.appendChild(newTab.header);
+
+        this.tabs.push(newTab);
+        this.tabIndex.push(newTab.id);
+        return newTab;
+    }
+
+    // ◙ ACTIONS ◙
+
+    help() {}
+
+    createNewTab(badge) {
+        let newTab = this.createTab(null, new Date().getTime());
+        this.badgeTabs.insert(newTab, 0);
+        if (badge) badge.moveTo(newTab.id);
+        this.tabOptions(newTab);
+    }
+
+    badgeOptions(badge) {
+        if (this.modal) this.activeMenu.close();
+        this.modal = true;
+        
+        // Create and configure menu elements
+        let menu = this.createAndConfigureElement("div", { className: "badge-menu", event: { name: "click", callback: (e)=>{e.stopPropagation()} } });
+        menu.head = this.createAndConfigureElement("div", { className: "menu-head" });
+        menu.body = this.createAndConfigureElement("div", { className: "menu-body" });
+        menu.favorite = this.createAndConfigureElement("button", {className: "badge-menu-btn favorite", event: { name: "click", callback: ()=>{} }});
+        menu.new = this.createAndConfigureElement("button", {className: "badge-menu-btn new", event: { name: "click", callback: ()=>{
+            menu.close();
+            this.createNewTab(badge);
+        }}});
+        badge.menu = menu;
+        this.activeMenu = menu;
+
+        menu.close = () => {
+            menu.remove();
+            badge.menu = null;
+            this.modal = false;
+            badge.unlock();
+        }
+
+        badge.lock();
+
+        // Start adding elements to DOM
+        moveElementsTo(menu.head, ...[menu.favorite, menu.new]);
+        appendChildren(menu, [menu.head, menu.body]);
+        badge.appendChild(menu);
+
+        // Generate tab selection list and append to menu in the order that they appear in the side-panel
+        Object.nonFunctionKeys(this.badgeTabs).sort((tabA, tabB) => this.badgeTabs[tabA].index - this.badgeTabs[tabB].index).forEach(tabKey => {
+            let tab = this.badgeTabs[tabKey];
+            let item = this.createAndConfigureElement("span", {
+                className: "tab-selector",
+                innerHTML: tab.name,
+                event: { name: "click", callback: badge.moveTo.bind(this, tabKey) }
+            });
+            item.style.setProperty("--color", tab.color);
+            menu.body.appendChild(item);
+        })
+        
+        // Set menu position to be right of the badge and centered vertically
+        let viewportPosition = menu.getBoundingClientRect();
+        let difference = {x:0, y:-menu.offsetHeight/2 + badge.offsetHeight/2};
+        
+        if (viewportPosition.top + difference.y < 60) difference.y = 60 - viewportPosition.top;
+        if (viewportPosition.bottom + difference.y > window.innerHeight) difference.y = window.innerHeight - viewportPosition.bottom;
+
+        menu.style.left = `${difference.x + badge.offsetWidth}px`;
+        menu.style.top = `${difference.y}px`;
+    }
+
+    tabOptions(tab) {
+        if (this.modal) this.activeMenu.close();
+        this.modal = true;
+        
+        // Create and configure menu elements
+        let menu = this.createAndConfigureElement("div", { className: "badge-menu", event: { name: "click", callback: (e)=>{e.stopPropagation()} } });
+        menu.body = this.createAndConfigureElement("div", { className: "menu-body", style: { display: 'flex', flexDirection: 'column' } });
+        menu.colorContainer = this.createAndConfigureElement("div", { id: "color-picker", title: "iro.js by James Daniel" });
+        menu.nameField = this.createAndConfigureElement("input", { id: "name", className: "menu-input", placeholder: "Tab name...", value: tab.getName() });
+        this.activeMenu = menu;
+
+        menu.close = () => {
+            this.badgeTabs.update(tab);
+            menu.remove();
+            this.modal = false;
+        }
+
+        // Start adding elements to DOM
+        moveElementsTo(menu.body, ...[menu.colorContainer, menu.nameField]);
+        moveElementsTo(menu, ...[menu.body]);
+        tab.header.appendChild(menu);
+
+        // Add the color picker
+        menu.colorPicker = new iro.ColorPicker("#color-picker", {
+            width: 86,
+            sliderSize: 15,
+            layoutDirection: "vertical",
+            borderWidth: 2,
+            borderColor: "#555",
+            color: { r: getRandomInt(255), g:getRandomInt(255), b:getRandomInt(255) }
+        });
+
+        // If the color has already been set, use that instead of a random color
+        if (tab.style.borderColor) menu.colorPicker.color.hexString = convertColor(tab.style.borderColor);
+
+        // Set event listeners to update tab when changes are made
+        menu.colorPicker.on('color:change', (color) => { tab.style.borderColor = color.hexString; tab.color = color.hexString; } )
+        menu.nameField.addEventListener('input', (e) => tab.setName(e.target.value) )
+        
+        // Set menu position to be right of the badge and centered vertically
+        let viewportPosition = menu.getBoundingClientRect();
+        let difference = {x:0, y:-menu.offsetHeight/2 + tab.header.offsetHeight/2};
+        
+        if (viewportPosition.top + difference.y < 60) difference.y = 60 - viewportPosition.top;
+        if (viewportPosition.bottom + difference.y > window.innerHeight) difference.y = window.innerHeight - viewportPosition.bottom;
+
+        menu.style.left = `${difference.x + tab.header.offsetWidth}px`;
+        menu.style.top = `${difference.y}px`;
+    }
+
+    // ▲ HELPER FUNCTIONS ▲
+
+    isInViewport(elem) {
+        var bounding = elem.getBoundingClientRect();
+        return (
+            bounding.top >= 0 &&
+            bounding.left >= 0 &&
+            bounding.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            bounding.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    };
+
+    createAndConfigureElement(type, properties) {
+        let newNode = document.createElement(type);
+
+        // If there is an event in the properties, add an event listener
+        if (properties.event) { newNode.addEventListener(properties.event.name, properties.event.callback); delete properties.event; }
+
+        // Assign the rest of the properties
+        newNode = Object.assign(newNode, properties);
+
+        // STYLE : If it is a string, apply it directly. If it is an object, copy any new key value pairs and overwrite the older ones
+        // This has to be done separately because setting via Object.assign does not properly set the style property for some reason
+        if (typeof properties.style == "string") newNode.style = properties.style;
+        else if (typeof properties.style == "object") Object.assign(newNode.style, properties.style); 
+
+        return newNode;
+    }
+
+    setStyle(element, style) {
+        // STYLE : If it is a string, apply it directly. If it is an object, copy any new key value pairs and overwrite the older ones
+        if (typeof style == "string") element.style = style;
+        else if (typeof style == "object") Object.assign(element.style, style); 
+    }
+
+    getChannelIDFromBadge(badge) {
+        let channel = badge.children[0].title;
+        return channel; // channel IDs are either custom channel names or auto-generated IDs. I.e, they are inconsistent and can no longer be used
+    }
+    
+    getChannelIDFromPage(callback) {
+        // wait .5s to let page set
+        let check = setInterval(()=>{
+            if (window.location.href.includes("watch?")) { // If we are on a video page
+                let id = document.querySelector("#upload-info[class*='style-scope']").querySelector("a").innerHTML;
+    
+                if (id != "") { callback(id); }
+            } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/")) { // If we are on a channel page
+                let id = document.getElementById("inner-header-container").querySelector("#text").innerHTML;
+                callback(id);
+            } else {
+                console.warn("[Youtube Tabs] Unable to get channel ID. Disabling subscription widget...");
+                let subWidget = document.getElementsByClassName("sub-widget")[0]; if (subWidget) { subWidget.remove(); } // Remove any subscribe widgets
+            }
+            clearInterval(check);
+        }, 500);
+    }
+
+    save() {
+        localStorage.setItem("subscription_links", JSON.stringify(this.badgeTabAssociations));
+        localStorage.setItem("subscription_tabs", JSON.stringify(this.badgeTabs));
+    }
+}
+
+// Raw JS InsertAfter code from StackOverflow. StackOverflow FTW!
+function insertAfter(referenceNode, newNode) {
+    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+}
+
+function moveElementsTo(newParent, ...children) { children.forEach((child)=>newParent.appendChild(child)); }
+
+
+
 function waitForPageLoad() {
     check = setInterval(function(){
         if (document.getElementsByClassName("tab").length > 0) { return; } // If we already have set tabs
@@ -746,7 +1356,7 @@ function generateTab(name, id, color, hidden) {
     tabHeaderGrab.addEventListener('mousedown', grabTab);
 
     if (hidden) {
-        tab.style.overflow = "hidden";
+        // tab.style.overflow = "hidden"; TODO: Remove and replace sub items?
         tab.style.maxHeight = "50px";
         tabHeaderExpand.style.transform = "rotate(180deg)";
     }
@@ -952,15 +1562,10 @@ function convertColor(color) {
         "palegreen":"#98fb98", "paleturquoise":"#afeeee", "palevioletred":"#d87093", "papayawhip":"#ffefd5", "peachpuff":"#ffdab9", "peru":"#cd853f", "pink":"#ffc0cb", "plum":"#dda0dd", "powderblue":"#b0e0e6", "purple":"#800080",  "rebeccapurple":"#663399", "red":"#ff0000", "rosybrown":"#bc8f8f", "royalblue":"#4169e1",  "saddlebrown":"#8b4513", "salmon":"#fa8072", "sandybrown":"#f4a460", "seagreen":"#2e8b57", "seashell":"#fff5ee", "sienna":"#a0522d", "silver":"#c0c0c0", "skyblue":"#87ceeb", "slateblue":"#6a5acd", "slategray":"#708090", "snow":"#fffafa", "springgreen":"#00ff7f", "steelblue":"#4682b4",   "tan":"#d2b48c", "teal":"#008080", "thistle":"#d8bfd8", "tomato":"#ff6347", "turquoise":"#40e0d0", "violet":"#ee82ee",   "wheat":"#f5deb3", "white":"#ffffff", "whitesmoke":"#f5f5f5", "yellow":"#ffff00", "yellowgreen":"#9acd32" 
     };
 
-    if (color == "") {
-        return colors["firebrick"];
-    }
+    if (color == "") return colors["firebrick"];
           
-    if (typeof colors[color.toLowerCase()] != 'undefined') 
-        return colors[color.toLowerCase()];
-    else {
-        return rgb2hex(color);
-    }
+    if (typeof colors[color.toLowerCase()] != 'undefined') return colors[color.toLowerCase()];
+    else return rgb2hex(color);
     return false; 
 }
 
@@ -981,19 +1586,13 @@ function appendChildren(parent, children) {
     }
 }
 
-// Raw JS InsertAfter code from StackOverflow. StackOverflow FTW!
-function insertAfter(referenceNode, newNode) {
-    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
-}
-
-
 // If the user browses to a different location, run it again
 // I tried so many 'proper' ways to do this, including window.onlocationchange. Sometimes you have to screw the proper ways of doing things if they simply don't work or over-complicate things
-setInterval(function(){
-    if (currentURL != window.location.href) {
-        currentURL = window.location.href;
-        onPageUpdate();
-    }
-}, 100);
+// setInterval(function(){
+//     if (currentURL != window.location.href) {
+//         currentURL = window.location.href;
+//         onPageUpdate();
+//     }
+// }, 100);
 
-waitForPageLoad();
+// waitForPageLoad();

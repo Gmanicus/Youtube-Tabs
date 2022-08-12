@@ -10,7 +10,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["iro.min.js", "content.js"],
+      "js": ["iro.min.js", "youtube-tabs.js"],
       "css": ["tabs.css"]
     }
   ]
