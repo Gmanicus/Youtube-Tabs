@@ -331,8 +331,9 @@ class TabManager {
     initializeSubListener() {
         // Handle new sub
         // Handle removed sub
-        document.addEventListener("yt-subscription-changed", () => {
-            this.logMessage("info", "HEY, WE CHANGED A SUBSCRIPTION!")
+        document.addEventListener("yt-subscription-changed", (e) => {
+            this.logMessage("info", "HEY, WE CHANGED A SUBSCRIPTION!", this.getChannelIDFromPage())
+            
         })
     }
 
@@ -562,6 +563,17 @@ class TabManager {
 
     // ▲ HELPER FUNCTIONS ▲
 
+    getChannelIDFromPage() {
+        // wait .5s to let page set
+        if (window.location.href.includes("watch?")) { // If we are on a video page
+            let id = document.querySelector("#upload-info[class*='style-scope']").querySelector("a").innerHTML;
+            return id;
+        } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/")) { // If we are on a channel page
+            let id = document.getElementById("inner-header-container").querySelector("#text").innerHTML;
+            return id;
+        }
+    }
+
     isInViewport(elem) {
         var bounding = elem.getBoundingClientRect();
         return (
@@ -598,24 +610,6 @@ class TabManager {
     getChannelIDFromBadge(badge) {
         let channel = badge.children[0].title;
         return channel; // channel IDs are either custom channel names or auto-generated IDs. I.e, they are inconsistent and can no longer be used
-    }
-    
-    getChannelIDFromPage(callback) {
-        // wait .5s to let page set
-        let check = setInterval(()=>{
-            if (window.location.href.includes("watch?")) { // If we are on a video page
-                let id = document.querySelector("#upload-info[class*='style-scope']").querySelector("a").innerHTML;
-    
-                if (id != "") { callback(id); }
-            } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/")) { // If we are on a channel page
-                let id = document.getElementById("inner-header-container").querySelector("#text").innerHTML;
-                callback(id);
-            } else {
-                console.warn("[Youtube Tabs] Unable to get channel ID. Disabling subscription widget...");
-                let subWidget = document.getElementsByClassName("sub-widget")[0]; if (subWidget) { subWidget.remove(); } // Remove any subscribe widgets
-            }
-            clearInterval(check);
-        }, 500);
     }
 
     save() {
