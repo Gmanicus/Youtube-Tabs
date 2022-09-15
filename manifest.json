@@ -11,7 +11,8 @@
     {
       "matches": ["https://www.youtube.com/*"],
       "js": ["iro.min.js", "youtube-tabs.js"],
-      "css": ["tabs.css"]
+      "css": ["tabs.css"],
+      "html": ["pop-up.html"]
     }
   ]
 }

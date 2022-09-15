@@ -9,10 +9,10 @@
 #page-manager.modal::after {
     content: "";
     position: fixed;
-    z-index: 999;
+    z-index: 2000;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0);
+    background-color: rgba(0, 0, 0, 0.5);
     animation: fade 0.3s normal forwards ease-in-out;
 }
 
@@ -34,6 +34,18 @@
     --text-color: white;
     --text-color-dim: #ccc;
     --highlight: rgba(255, 255, 255, 0.1);
+}
+
+/* Copied from video title styling */
+.header {
+    font-family: "Roboto","Arial",sans-serif;
+    font-size: 1.4rem;
+    line-height: 2rem;
+    font-weight: 500;
+    max-height: 4rem;
+    overflow: hidden;
+    display: block;
+    -webkit-line-clamp: 2;
 }
 
 .poster {
@@ -98,6 +110,38 @@
     padding: 8px 0;
 }
 
+.ytt-popup {
+    z-index: 2000;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    min-width: 25%;
+    padding: 32px;
+
+    pointer-events: all;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    border-radius: var(--bd-radius);
+    border: 1px solid var(--bd-color);
+    box-shadow: rgb(0 0 0 / 67%) 500px 0px 500px -500px inset;
+    /* width: 50px;
+    height: 50px; */
+}
+
+.new-badge-popup .popup-body {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+} .new-badge-popup .badge {
+    max-width: 256px;
+    --paper-item-min-height: 40px;
+} .new-badge-popup .badge-menu {
+    box-shadow: 0 0 16px 1px #000000aa;
+}
+
 .btn {
     position: inline-block;
     width: 20px;
@@ -129,7 +173,7 @@
     width: 100%;
     max-height: fit-content;
 
-    padding-top: 10px; padding-bottom: 10px;
+    padding-bottom: 10px;
     border: 6px solid firebrick;
     border-bottom-width: 0px;
     border-right: hidden;
@@ -151,6 +195,8 @@
     box-shadow: -2px 6px 6px 0 #0000005a;
     margin-bottom: 6px;
     border-bottom-right-radius: 20px;
+} .tab.closed {
+    padding-bottom: 0;
 }
 
 .tab-menu {
@@ -158,16 +204,31 @@
     z-index: 1;
     display: flex;
     width: calc(100% - 10px);
-    padding-left: 10px;
+    padding: 10px 0 10px 10px;
     align-items: center;
 }  .tab-menu-name {
     display: inline-block;
+    flex: 1;
     margin-left: 30px;
     color: var(--text-color-dim);
     font-weight: lighter;
     user-select: none;
-    pointer-events: none;
-} .tab-menu-btn {
+}
+.tab-menu .hover-zone {
+    position: absolute;
+    right: 0;
+    width: 55%;
+    height: 100%;
+    
+    border-radius: 0 20px 0 0;
+    box-shadow: inset 0 -20px 0 -20px rgba(255, 255, 255, 0.3);
+    transition: box-shadow 0.15s ease-in-out;
+} .hover-zone:hover {
+    box-shadow: inset -90px 0 70px -80px rgba(255, 255, 255, 0.3);
+    cursor: grab;
+}
+
+.tab-menu-btn {
     display: inline-block;
     min-width: 16px;
     min-height: 16px;
@@ -177,7 +238,8 @@
     background-repeat: no-repeat;
     background-color: transparent;
     cursor: pointer;
-    transition: all 0.1s ease-in-out
+    transition: all 0.1s ease-in-out;
+    pointer-events: all;
 } .tab-menu-btn:hover {
     transform: scale(1.2);
 } .edit-back {
@@ -197,6 +259,11 @@
     z-index: 2;
     position: absolute;
     right: 0;
+
+    /* The grab button should be slightly larger to be seen under the cursor */
+    height: 24px;
+    width: 24px;
+    margin: 0 8px 0 0;
 
     user-select: none;
     opacity: 0;
@@ -257,6 +324,7 @@
     box-sizing: border-box;
     pointer-events: all;
     overflow: hidden;
+    z-index: 10000;
 
     border-radius: var(--bd-radius);
     border: 1px solid var(--bd-color);
@@ -383,7 +451,7 @@
     top: 0;
     left: 0;
     
-    z-index: 999;
+    z-index: 2000;
     text-align: center;
     overflow-x: hidden;
 

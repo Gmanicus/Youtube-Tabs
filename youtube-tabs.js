@@ -55,13 +55,26 @@ class TabManager {
     _modal = false;
 
     set modal(value) {
+        if (this._modal == value) return;
         this._modal = value;
         if (value) { // If we are enabling modal, add the modal class to the page content and add a listener to close the active menu when it is clicked
             let content = document.getElementById("page-manager");
             content.classList.add("modal");
 
-            content.addEventListener("click", () => { if (this.modal) this.activeMenu?.close(); })
-        } else document.getElementById("page-manager").classList.remove("modal");
+            // prevent scrolling
+            document.documentElement.style.overflow = "hidden";
+
+            // Close active menus and pages when background is clicked
+            content.addEventListener("click", () => { if (this.modal) { this.activeMenu?.close(); this.activePage?.close(); } })
+        } else {
+            document.getElementById("page-manager").classList.remove("modal");
+            // enable scrolling
+            document.documentElement.style.overflow = "";
+
+            // Close active menus
+            this.activeMenu?.close();
+            this.activePage?.close();
+        }
     }
 
     get modal() { return this._modal; }
@@ -110,6 +123,10 @@ class TabManager {
         this.tabs = [];
         this.badges = [];
         this.modal = false;
+
+        // Active menu / page when user interacts
+        this.activeMenu;
+        this.activePage;
 
         this.reformatGuide();
         this.initializeTabs();
@@ -234,6 +251,7 @@ class TabManager {
     initializeBadges() {
         this.badges = this.badgeContainer.querySelectorAll("ytd-guide-entry-renderer");
         this.badges.forEach((badge)=>{
+            if (badge.classList.contains("badge")) return; // Return if we've already initialized this badge
             badge.id = this.getChannelIDFromBadge(badge);
             badge.classList.add("badge")
             switch (badge.getAttribute("line-end-style")) {
@@ -275,7 +293,7 @@ class TabManager {
                     else insertAfter(sortedFamily[newIndex-1], badge);
                 } else {
                     this.sortBadges();
-                    this.arrangeBadges
+                    this.arrangeBadges();
                 }
 
                 // Close the badge options menu if there is one
@@ -332,8 +350,31 @@ class TabManager {
         // Handle new sub
         // Handle removed sub
         document.addEventListener("yt-subscription-changed", (e) => {
-            this.logMessage("info", "HEY, WE CHANGED A SUBSCRIPTION!", this.getChannelIDFromPage())
-            
+            let id = this.getChannelIDFromPage();
+            let unsubscribed = Array.from(this.badges).find((badge) => badge.id == id) != undefined;
+
+            if (unsubscribed) {
+                this.logMessage("info", "Unsubscribed from", id)
+                let oldBadge = Array.from(this.badges).find((badge) => badge.id == id);
+                let oldBadgeIndex = Array.from(this.badges).findIndex((badge) => badge.id == id);
+
+                oldBadge.remove();
+                this.badges.splice(oldBadgeIndex, 1);
+            } else {
+                this.logMessage("info", "Subscribed to", id)
+
+                let subsUpdate = new MutationObserver(() => {
+                    this.initializeBadges();
+                    let newBadge = Array.from(this.badges).find((badge) => badge.id == id);
+                    // if (newBadge) newBadge.style.backgroundColor = 'red';
+                    
+                    subsUpdate.disconnect();
+
+                    this.handleSubscription(newBadge);
+                })
+
+                subsUpdate.observe(this.badgeContainer, { childList: true });
+            }
         })
     }
 
@@ -436,7 +477,7 @@ class TabManager {
         newTab.edit = this.createAndConfigureElement("button", {className: "tab-menu-btn edit-back", event: { name: "click", callback: this.tabOptions.bind(this, newTab) }});
         newTab.delete = this.createAndConfigureElement("button", {className: "tab-menu-btn delete-back", event: { name: "click", callback: newTab.delete }});
         newTab.expand = this.createAndConfigureElement("button", {className: "tab-menu-btn expand-arrow", event: { name: "click", callback: newTab.toggle }});
-        newTab.grab = this.createAndConfigureElement("button", {className: "tab-menu-btn grab", event: { name: "mousedown", callback: ()=>{} }});
+        newTab.grab = this.createAndConfigureElement("span", {className: "hover-zone"});
         
         moveElementsTo(newTab.header, ...[newTab.edit, newTab.delete, newTab.expand, newTab.grab]);
         newTab.header.appendChild(this.createAndConfigureElement("h3", {innerHTML: title?.toUpperCase() || "", className: "tab-menu-name"}));
@@ -459,7 +500,7 @@ class TabManager {
     }
 
     badgeOptions(badge) {
-        if (this.modal) this.activeMenu.close();
+        if (this.modal) this.activeMenu?.close();
         this.modal = true;
         
         // Create and configure menu elements
@@ -559,6 +600,31 @@ class TabManager {
 
         menu.style.left = `${difference.x + tab.header.offsetWidth}px`;
         menu.style.top = `${difference.y}px`;
+    }
+
+    handleSubscription(badge) {
+        if (this.modal) this.activeMenu.close();
+        this.modal = true;
+
+        let popUp = this.createAndConfigureElement("div", { className: "new-badge-popup ytt-popup" });
+        popUp.exit = this.createAndConfigureElement("btn", { className: "exit" });
+        popUp.body = this.createAndConfigureElement("div", { className: "popup-body" });
+        popUp.text = this.createAndConfigureElement("p", { className: "header", innerHTML: "Where would you like to put this subscription?" });
+        this.activePage = popUp;
+        
+        popUp.close = () => {
+            popUp.remove();
+            this.activeMenu?.close();
+            this.modal = false;
+        }
+
+        // Clicking badge menu causes this pop-up to close, also removing badge menu
+        // Override needed
+
+        moveElementsTo(popUp, ...[popUp.exit, popUp.body]);
+        moveElementsTo(popUp.body, ...[popUp.text, badge]);
+        document.body.append(popUp);
+
     }
 
     // ▲ HELPER FUNCTIONS ▲
