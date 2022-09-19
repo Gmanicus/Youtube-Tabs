@@ -43,9 +43,17 @@
     line-height: 2rem;
     font-weight: 500;
     max-height: 4rem;
+    margin-bottom: 1.5rem;
     overflow: hidden;
     display: block;
     -webkit-line-clamp: 2;
+}
+
+.ruler {
+    width: 100%;
+    height: 1px;
+    background-color: var(--bd-color);
+    margin-bottom: 1.5rem;
 }
 
 .poster {
@@ -130,10 +138,11 @@
     height: 50px; */
 }
 
-.new-badge-popup .popup-body {
+.new-badge-popup {
+    min-width: fit-content;
+} .new-badge-popup .popup-body {
     display: flex;
-    flex-direction: row;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
 } .new-badge-popup .badge {
     max-width: 256px;
@@ -200,6 +209,7 @@
 }
 
 .tab-menu {
+    user-select: none;
     position: relative;
     z-index: 1;
     display: flex;
@@ -276,6 +286,7 @@
 }
 
 .badge {
+    user-select: none;
     z-index: 1;
 } .badge:hover > .badge-retractor {
     width: calc(100% + 36px);

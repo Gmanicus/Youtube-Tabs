@@ -123,6 +123,7 @@ class TabManager {
         this.tabs = [];
         this.badges = [];
         this.modal = false;
+        this.grabbing = false;
 
         // Active menu / page when user interacts
         this.activeMenu;
@@ -148,7 +149,7 @@ class TabManager {
     **/
     reformatGuide() {
         this.setStyle(this.sidePanel, { overflow: "visible" });
-        this.setStyle(this.sidePanelTrack, { overflow: "visible", transition: "margin-top 0.1s linear" });
+        this.setStyle(this.sidePanelTrack, { overflow: "visible", transition: "margin-top 0.05s linear" });
         // Update with ScrollTop or ScrollTo? https://stackoverflow.com/questions/635706/how-to-scroll-to-an-element-inside-a-div
         this.sidePanelTrack.addEventListener("wheel", (e) => {
             if (this.modal) return; // If modal (some other menu is in focus), don't scroll the side-bar
@@ -472,12 +473,59 @@ class TabManager {
             this.badgeTabs.update(newTab);
         }
 
+        // When user click & holds on the header of the tab to reorder
+        newTab.grab = (event) => {
+            if (!event.button == 0) return; // If the left-mouse button was not pressed
+            this.grabbing = true;
+
+            let oldPosition = newTab.getBoundingClientRect().top;
+            let oldTrackPosition = parseInt(this.sidePanelTrack.style.marginTop); if (!oldTrackPosition) oldTrackPosition = 0;
+            let oldTransition = this.sidePanelTrack.style.transition;
+
+            // Set every tab to closed
+            this.tabs.forEach((tab) => {
+                tab.classList.add("closed");
+            })
+
+            // Stop grabbing on mouse up
+            document.addEventListener("mouseup", () => { newTab.drop(oldTrackPosition); }, { once: true });
+
+            // Make sidepanel scroll instantaneous
+            this.sidePanelTrack.style.transition = "none";
+
+            // Scroll the sidebar so that the cursor is still on the grabbed tab
+            let posDifference = newTab.getBoundingClientRect().top - oldPosition;
+            let newPosition = oldTrackPosition - posDifference;
+
+            this.sidePanelTrack.style.marginTop = newPosition + "px";
+            this.sidePanelTrack.getBoundingClientRect(); // Trigger reflow
+            this.sidePanelTrack.style.transition = oldTransition;
+        }
+
+        // When user lets go of the tab after reordering it
+        newTab.drop = (oldPosition) => {
+
+            let oldTransition = this.sidePanelTrack.style.transition;
+            // Make sidepanel scroll instantaneous
+            this.sidePanelTrack.style.transition = "none";
+
+            // Reset sidepanel position
+            this.sidePanelTrack.style.marginTop = oldPosition + "px";
+            this.sidePanelTrack.getBoundingClientRect(); // Trigger reflow
+            this.sidePanelTrack.style.transition = oldTransition;
+
+            this.tabs.forEach((tab) => {
+                let closed = this.badgeTabs[tab.id]?.hidden;
+                if (!closed) tab.classList.remove("closed");
+            })
+        }
+
         // Configure tab elements
         newTab.header = this.createAndConfigureElement("div", {className: "tab-menu"});
         newTab.edit = this.createAndConfigureElement("button", {className: "tab-menu-btn edit-back", event: { name: "click", callback: this.tabOptions.bind(this, newTab) }});
         newTab.delete = this.createAndConfigureElement("button", {className: "tab-menu-btn delete-back", event: { name: "click", callback: newTab.delete }});
         newTab.expand = this.createAndConfigureElement("button", {className: "tab-menu-btn expand-arrow", event: { name: "click", callback: newTab.toggle }});
-        newTab.grab = this.createAndConfigureElement("span", {className: "hover-zone"});
+        newTab.grab = this.createAndConfigureElement("span", {className: "hover-zone", event: { name: "mousedown", callback: newTab.grab }});
         
         moveElementsTo(newTab.header, ...[newTab.edit, newTab.delete, newTab.expand, newTab.grab]);
         newTab.header.appendChild(this.createAndConfigureElement("h3", {innerHTML: title?.toUpperCase() || "", className: "tab-menu-name"}));
@@ -622,7 +670,11 @@ class TabManager {
         // Override needed
 
         moveElementsTo(popUp, ...[popUp.exit, popUp.body]);
-        moveElementsTo(popUp.body, ...[popUp.text, badge]);
+        moveElementsTo(popUp.body, ...[
+            popUp.text,
+            this.createAndConfigureElement("div", { className: "ruler" }),
+            badge
+        ]);
         document.body.append(popUp);
 
     }
