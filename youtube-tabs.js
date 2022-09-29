@@ -102,18 +102,18 @@ class TabManager {
         // Elements
         this.sidePanel = document.getElementById("guide-content");
         this.sidePanelTrack = document.getElementById("guide-inner-content");
-        this.badgeContainer = this.sidePanel.querySelectorAll("#items")[1];
+        this.badgeContainer = this.sidePanel.querySelectorAll("#guide-content #items")[1];
         this.badgeHeader = this.createAndConfigureElement("div", { className: "badge-header" });
         this.newTab = this.createAndConfigureElement("span", {
             className: "btn",
             title: "New Tab",
             style: { backgroundImage: "url('https://i.imgur.com/zggQshn.png')" },
-            event: { name: "click", callback: this.createNewTab.bind(this) }
+            event: { name: "click", callback: this.createNewTab.bind(this, null) }
         });
         this.info = this.createAndConfigureElement("span", {
             className: "btn",
             title: "Help/Info",
-            style: { backgroundImage: "url('https://i.imgur.com/9RJ5eKQ.png')" },
+            style: { backgroundImage: "url('https://i.imgur.com/J39co3K.png')" },
             event: { name: "click", callback: this.help.bind(this) }
         });
 
@@ -477,18 +477,22 @@ class TabManager {
         newTab.grab = (event) => {
             if (!event.button == 0) return; // If the left-mouse button was not pressed
             this.grabbing = true;
-
+            newTab.classList.add("grabbed");
+            
             let oldPosition = newTab.getBoundingClientRect().top;
             let oldTrackPosition = parseInt(this.sidePanelTrack.style.marginTop); if (!oldTrackPosition) oldTrackPosition = 0;
             let oldTransition = this.sidePanelTrack.style.transition;
 
+            // Stop grabbing on mouse up
+            document.addEventListener("mouseup", () => { newTab.drop(oldTrackPosition); }, { once: true });
+            
             // Set every tab to closed
             this.tabs.forEach((tab) => {
                 tab.classList.add("closed");
+                // Create grab & drop callback pointer (bind creates separate function references, so instead we can reference this one bind via a variable)
+                tab.grabDropCallback = tab.swap.bind(null, newTab, this.badgeContainer);
+                tab.addEventListener("mouseenter", tab.grabDropCallback);
             })
-
-            // Stop grabbing on mouse up
-            document.addEventListener("mouseup", () => { newTab.drop(oldTrackPosition); }, { once: true });
 
             // Make sidepanel scroll instantaneous
             this.sidePanelTrack.style.transition = "none";
@@ -504,6 +508,20 @@ class TabManager {
 
         // When user lets go of the tab after reordering it
         newTab.drop = (oldPosition) => {
+            // if (subTabDict[e.target.id].index > subTabDict[grabbedTab.id].index) {
+            //     insertAfter(e.target, grabbedTab);
+            // } else {
+            //     widgetContainer.insertBefore(grabbedTab, e.target);
+            // }
+        
+            // let newIndex = subTabDict[e.target.id].index;
+            // subTabDict[e.target.id].index = subTabDict[grabbedTab.id].index;
+            // subTabDict[grabbedTab.id].index = newIndex;
+
+            console.log("DROP TABLES", title);
+
+
+            newTab.classList.remove("grabbed", "movedup", "moveddown");
 
             let oldTransition = this.sidePanelTrack.style.transition;
             // Make sidepanel scroll instantaneous
@@ -517,7 +535,28 @@ class TabManager {
             this.tabs.forEach((tab) => {
                 let closed = this.badgeTabs[tab.id]?.hidden;
                 if (!closed) tab.classList.remove("closed");
+                tab.removeEventListener("mouseenter", tab.grabDropCallback);
+                
+                // Store new tab index
+                if (this.badgeTabs[tab.id]) {
+                    this.badgeTabs[tab.id].index = getChildIndex(tab);
+                    this.save();
+                }
             })
+        }
+
+        newTab.swap = function(targetTab, badgeContainer) {
+            if (newTab == targetTab) return;
+            targetTab.classList.remove("movedup", "moveddown");
+            targetTab.getBoundingClientRect(); // Trigger reflow
+            
+            if (getChildIndex(newTab) > getChildIndex(targetTab)) {
+                insertAfter(newTab, targetTab);
+                targetTab.classList.add("moveddown");
+            } else {
+                badgeContainer.insertBefore(targetTab, newTab);
+                targetTab.classList.add("movedup");
+            }
         }
 
         // Configure tab elements
@@ -541,7 +580,7 @@ class TabManager {
     help() {}
 
     createNewTab(badge) {
-        let newTab = this.createTab(null, new Date().getTime());
+        let newTab = this.createTab("", new Date().getTime());
         this.badgeTabs.insert(newTab, 0);
         if (badge) badge.moveTo(newTab.id);
         this.tabOptions(newTab);
@@ -734,6 +773,11 @@ class TabManager {
         localStorage.setItem("subscription_links", JSON.stringify(this.badgeTabAssociations));
         localStorage.setItem("subscription_tabs", JSON.stringify(this.badgeTabs));
     }
+}
+
+// Get the index of this element relative to its parent
+function getChildIndex(child) {
+    return Array.from(child.parentNode.children).indexOf(child);
 }
 
 // Raw JS InsertAfter code from StackOverflow. StackOverflow FTW!
