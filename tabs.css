@@ -344,7 +344,31 @@
 } .badge:hover > .badge-retractor::after {
     opacity: 1;
     visibility: inherit;
-} .badge-retractor {
+} .badge yt-img-shadow {
+    position: relative;
+} .badge yt-img-shadow {
+    pointer-events: all;
+
+    height: fit-content;
+    width: fit-content;
+    padding: 2px;
+    border: 0 solid white;
+} .badge yt-img-shadow:hover {
+    border: 2px solid white;
+    margin-left: -2px;
+    margin-right: calc(24px - 2px);
+} .badge.favorite yt-img-shadow {
+    border: 3px outset rgb(255, 200, 0);
+    margin-left: -3px;
+    margin-right: calc(24px - 3px);
+}
+
+.badge yt-img-shadow > img {
+    border-radius: 50%;
+    box-shadow: 0px 0px 3px 2px rgb(0, 0, 0, 50%);
+}
+
+.badge-retractor {
     z-index: -1;
     position: absolute;
     height: 100%;
@@ -369,7 +393,9 @@
     background-image: url('https://i.imgur.com/R46R8KY.png');
     background-position: center;
     background-size: contain;
-} .tab.closed .badge {
+}
+
+.tab.closed .badge {
     display: none;
 }
 

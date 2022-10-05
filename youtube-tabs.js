@@ -80,8 +80,22 @@ class TabManager {
     get modal() { return this._modal; }
 
     constructor() {
-        this.badgeTabAssociations = JSON.parse(localStorage.getItem("subscription_links"));
-        this.badgeTabs = JSON.parse(localStorage.getItem("subscription_tabs"));
+        // If there is data stored under old storage names, migrate it
+        if (localStorage.getItem("subscription_links")) {
+            let deprecatedBadgeData = JSON.parse(localStorage.getItem("subscription_links"));
+            
+            // If badge data is stored in an obsolete way, migrate it
+            Object.keys(deprecatedBadgeData).forEach(badge => {
+                if (typeof deprecatedBadgeData[badge] == "object") return;
+                deprecatedBadgeData[badge] = { "tabID": deprecatedBadgeData[badge], "favorite": false }
+            })
+            localStorage.setItem("ytt-badges", JSON.stringify(deprecatedBadgeData));
+        } if (localStorage.getItem("subscription_tabs")) {
+            localStorage.setItem("ytt-tabs", localStorage.getItem("subscription_tabs"));
+        }
+
+        this.badgeData = JSON.parse(localStorage.getItem("ytt-badges"));
+        this.tabData = JSON.parse(localStorage.getItem("ytt-tabs"));
 
         // Retrieve version stored in the manifest
         this.version = null;
@@ -177,14 +191,14 @@ class TabManager {
 
     initializeTabs() {
         // Create tabs in ascending order by index
-        Object.nonFunctionKeys(this.badgeTabs).sort((keyA, keyB)=>{return this.badgeTabs[keyA].index - this.badgeTabs[keyB].index}).forEach((id)=>{
-            let tab = this.badgeTabs[id];
+        Object.nonFunctionKeys(this.tabData).sort((keyA, keyB)=>{return this.tabData[keyA].index - this.tabData[keyB].index}).forEach((id)=>{
+            let tab = this.tabData[id];
             this.createTab(tab.name, id, tab.color, tab.hidden).moveToBottom();
         })
 
         // Insert tab at index
         // ...append tab
-        this.badgeTabs.insert = (tab, index) => {
+        this.tabData.insert = (tab, index) => {
             let constrainedIndex = Math.min(index, 0); // Constrain the index so it is always within possible range
 
             let updateIndex = this.tabIndex.findIndex((id) => id == tab.id);
@@ -200,15 +214,15 @@ class TabManager {
                 this.tabIndex.splice(constrainedIndex, 0, tab.id);
             }
 
-            this.badgeTabs.update(tab);
+            this.tabData.update(tab);
 
             // Update all indexes
-            Object.nonFunctionKeys(this.badgeTabs).forEach((id) => {
-                this.badgeTabs[id].index = this.tabIndex.findIndex((index_id) => index_id == id);
+            Object.nonFunctionKeys(this.tabData).forEach((id) => {
+                this.tabData[id].index = this.tabIndex.findIndex((index_id) => index_id == id);
             })
 
             // Reorder tab elements
-            Object.nonFunctionKeys(this.badgeTabs).sort((keyA, keyB)=>{return this.badgeTabs[keyA].index - this.badgeTabs[keyB].index}).forEach((id)=>{
+            Object.nonFunctionKeys(this.tabData).sort((keyA, keyB)=>{return this.tabData[keyA].index - this.tabData[keyB].index}).forEach((id)=>{
                 this.tabs.find((tab) => tab.id == id)?.moveToBottom();
             })
 
@@ -216,10 +230,10 @@ class TabManager {
         }
 
         // Update tabs in storage
-        this.badgeTabs.update = (tab) => {
+        this.tabData.update = (tab) => {
             // If tab is already in the database list, update it
-            if (Object.nonFunctionKeys(this.badgeTabs).find((id) => id == tab.id)) {
-                Object.assign(this.badgeTabs[tab.id], {
+            if (Object.nonFunctionKeys(this.tabData).find((id) => id == tab.id)) {
+                Object.assign(this.tabData[tab.id], {
                     name: tab.title,
                     color: tab.color,
                     hidden: tab.closed,
@@ -227,7 +241,7 @@ class TabManager {
                 })
             // If not, add it
             } else {
-                this.badgeTabs[tab.id] = {
+                this.tabData[tab.id] = {
                     name: tab.title,
                     color: tab.color,
                     hidden: tab.closed,
@@ -238,13 +252,13 @@ class TabManager {
             this.save();
         }
 
-        this.badgeTabs.delete = (tab) => {
-            delete this.badgeTabs[tab.id];
+        this.tabData.delete = (tab) => {
+            delete this.tabData[tab.id];
             this.tabs.splice(this.tabs.findIndex((tabItem) => tabItem.id == tab.id), 1);
             this.tabIndex.splice(this.tabIndex.findIndex((idItem) => idItem == tab.id), 1);
                 
             // Remove all badge tab associations to this tab
-            for (const [key, value] of Object.entries(this.badgeTabAssociations)) { if (value == tab.id) this.badgeTabAssociations[key] = -1; }
+            for (const [key, value] of Object.entries(this.badgeData)) { if (value == tab.id) this.badgeData[key].tabID = -1; }
             this.save();
         }
     }
@@ -254,6 +268,7 @@ class TabManager {
         this.badges.forEach((badge)=>{
             if (badge.classList.contains("badge")) return; // Return if we've already initialized this badge
             badge.id = this.getChannelIDFromBadge(badge);
+            badge.icon = badge.querySelector("yt-img-shadow");
             badge.classList.add("badge")
             switch (badge.getAttribute("line-end-style")) {
                 case "none": badge.status = 0; break;
@@ -261,16 +276,36 @@ class TabManager {
                 case "badge": badge.status = 2; break;
             }
 
+            // If this badge hasn't been stored yet
+            // Create badge data for it
+            // Else, set favorite style
+            if (!this.badgeData[badge.id]) {
+                this.badgeData[badge.id] = {
+                    "tabID": -1,
+                    "favorite": false
+                }
+            } else if (this.badgeData[badge.id].favorite) badge.classList.add("favorite");
+
             // Add badge menu button
             badge.appendChild(this.createAndConfigureElement("button", {className: "badge-retractor", event: { name: "click", callback: (e)=>{
                 e.stopImmediatePropagation();
                 this.badgeOptions(badge);
             }}}));
 
-            // Add badge functions
+            // ◄ Add badge functions ►
+            // • Favorite or unfavorite badge on click of the badge icon
+            badge.toggleFavorite = (e) => {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                this.badgeData[badge.id].favorite = badge.classList.toggle("favorite");
+                console.log(((this.badgeData[badge.id].favorite) ? "Favorited" : "Unfavorited") + ` ${badge.id}`);
+                
+                this.save();
+            }
+
             // • moveTo: move this badge to a specific tab and save it
             badge.moveTo = (tabID) => {
-                let association = this.badgeTabAssociations[badge.id];
+                let association = this.badgeData[badge.id].tabID;
                 if (!tabID) { this.logMessage("error", "Badge.moveTo() tab ID doesn't exist!", badge.id, tabID); return; }
                 else if (tabID != -1 && !document.getElementById(tabID)) { this.logMessage("error", "Badge.moveTo() tab not found!", tabID); return; }
 
@@ -279,7 +314,7 @@ class TabManager {
                 else if (association) this.logMessage("info", `Badge '${badge.id}' moving from ${association} to ${tabID}`);
                 else this.logMessage("info", `Badge '${badge.id}' moving to ${tabID}`);
                 
-                this.badgeTabAssociations[badge.id] = tabID;
+                this.badgeData[badge.id].tabID = tabID;
                 this.save();
 
                 if (tabID != -1) {
@@ -312,6 +347,10 @@ class TabManager {
                 this.setStyle(badge, { pointerEvents: "all" });
                 badge.removeAttribute("active");
             }
+
+            // ◄ Add badge events ►
+            // • Add badge favorite event to icon
+            badge.icon.addEventListener("click", badge.toggleFavorite);
         })
 
         this.sortBadges();
@@ -385,8 +424,8 @@ class TabManager {
         let setMaster = false;
         if (badgeList == undefined || badgeList.length == 0) { badgeList = this.badges; setMaster = true; }
         badgeList = Array.from(badgeList).sort((badge1, badge2)=>{
-            let badge1TabIndex = this.badgeTabs[this.badgeTabAssociations[badge1.id]]?.index + 1 || Infinity;
-            let badge2TabIndex = this.badgeTabs[this.badgeTabAssociations[badge2.id]]?.index + 1 || Infinity;
+            let badge1TabIndex = this.tabData[this.badgeData[badge1.id].tabID]?.index + 1 || Infinity;
+            let badge2TabIndex = this.tabData[this.badgeData[badge2.id].tabID]?.index + 1 || Infinity;
             
             // Sort the widgets by
             // TODO: >>>> Favorited
@@ -405,7 +444,7 @@ class TabManager {
     // In the currently sorted order, add badges to their respective tabs
     arrangeBadges() {
         this.badges.forEach((badge)=>{
-            let tab = this.tabs.find((tab)=>{ return tab.id == this.badgeTabAssociations[badge.id] }) // Get the tab element that this badge belongs in
+            let tab = this.tabs.find((tab)=>{ return tab.id == this.badgeData[badge.id].tabID }) // Get the tab element that this badge belongs in
             if (tab) tab.appendChild(badge); // If that tab exists, append the badge to the tab
             else this.badgeContainer.appendChild(badge); // If not, append the badge to the container
         })
@@ -460,7 +499,7 @@ class TabManager {
         // Delete tab method
         newTab.delete = () => {
             if (confirm("Are you sure?")) {
-                this.badgeTabs.delete(newTab);
+                this.tabData.delete(newTab);
                 newTab.remove();
                 this.sortBadges();
                 this.arrangeBadges();
@@ -470,7 +509,7 @@ class TabManager {
         newTab.toggle = () => {
             newTab.classList.toggle("closed");
             newTab.closed = newTab.classList.contains("closed")
-            this.badgeTabs.update(newTab);
+            this.tabData.update(newTab);
         }
 
         // When user click & holds on the header of the tab to reorder
@@ -508,20 +547,12 @@ class TabManager {
 
         // When user lets go of the tab after reordering it
         newTab.drop = (oldPosition) => {
-            // if (subTabDict[e.target.id].index > subTabDict[grabbedTab.id].index) {
-            //     insertAfter(e.target, grabbedTab);
-            // } else {
-            //     widgetContainer.insertBefore(grabbedTab, e.target);
-            // }
-        
-            // let newIndex = subTabDict[e.target.id].index;
-            // subTabDict[e.target.id].index = subTabDict[grabbedTab.id].index;
-            // subTabDict[grabbedTab.id].index = newIndex;
-
-            console.log("DROP TABLES", title);
-
-
-            newTab.classList.remove("grabbed", "movedup", "moveddown");
+            newTab.classList.remove("grabbed");
+            
+            // Remove animation class once ended
+            newTab.addEventListener("animationend", () => {
+                newTab.classList.remove("movedup", "moveddown");
+            }, {once: true})
 
             let oldTransition = this.sidePanelTrack.style.transition;
             // Make sidepanel scroll instantaneous
@@ -533,13 +564,13 @@ class TabManager {
             this.sidePanelTrack.style.transition = oldTransition;
 
             this.tabs.forEach((tab) => {
-                let closed = this.badgeTabs[tab.id]?.hidden;
+                let closed = this.tabData[tab.id]?.hidden;
                 if (!closed) tab.classList.remove("closed");
                 tab.removeEventListener("mouseenter", tab.grabDropCallback);
                 
                 // Store new tab index
-                if (this.badgeTabs[tab.id]) {
-                    this.badgeTabs[tab.id].index = getChildIndex(tab);
+                if (this.tabData[tab.id]) {
+                    this.tabData[tab.id].index = getChildIndex(tab);
                     this.save();
                 }
             })
@@ -581,7 +612,7 @@ class TabManager {
 
     createNewTab(badge) {
         let newTab = this.createTab("", new Date().getTime());
-        this.badgeTabs.insert(newTab, 0);
+        this.tabData.insert(newTab, 0);
         if (badge) badge.moveTo(newTab.id);
         this.tabOptions(newTab);
     }
@@ -617,8 +648,8 @@ class TabManager {
         badge.appendChild(menu);
 
         // Generate tab selection list and append to menu in the order that they appear in the side-panel
-        Object.nonFunctionKeys(this.badgeTabs).sort((tabA, tabB) => this.badgeTabs[tabA].index - this.badgeTabs[tabB].index).forEach(tabKey => {
-            let tab = this.badgeTabs[tabKey];
+        Object.nonFunctionKeys(this.tabData).sort((tabA, tabB) => this.tabData[tabA].index - this.tabData[tabB].index).forEach(tabKey => {
+            let tab = this.tabData[tabKey];
             let item = this.createAndConfigureElement("span", {
                 className: "tab-selector",
                 innerHTML: tab.name,
@@ -651,7 +682,7 @@ class TabManager {
         this.activeMenu = menu;
 
         menu.close = () => {
-            this.badgeTabs.update(tab);
+            this.tabData.update(tab);
             menu.remove();
             this.modal = false;
         }
@@ -770,8 +801,8 @@ class TabManager {
     }
 
     save() {
-        localStorage.setItem("subscription_links", JSON.stringify(this.badgeTabAssociations));
-        localStorage.setItem("subscription_tabs", JSON.stringify(this.badgeTabs));
+        localStorage.setItem("ytt-badges", JSON.stringify(this.badgeData));
+        localStorage.setItem("ytt-tabs", JSON.stringify(this.tabData));
     }
 }
 
