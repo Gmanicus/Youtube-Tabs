@@ -443,6 +443,8 @@
     transform: scale(1.2);
 } .badge-menu-btn.favorite {
     background-image: url('https://i.imgur.com/RHEXSmp.png');
+} .badge-menu-btn.favorite.filled {
+    background-image: url('https://i.imgur.com/vDfvgLZ.png');
 } .badge-menu-btn.new {
     background-image: url('https://i.imgur.com/zggQshn.png');
 } .tab-selector {

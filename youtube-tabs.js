@@ -298,9 +298,12 @@ class TabManager {
                 e.stopImmediatePropagation();
                 e.preventDefault();
                 this.badgeData[badge.id].favorite = badge.classList.toggle("favorite");
-                console.log(((this.badgeData[badge.id].favorite) ? "Favorited" : "Unfavorited") + ` ${badge.id}`);
+                this.logMessage("info", ((this.badgeData[badge.id].favorite) ? "Favorited" : "Unfavorited") + ` ${badge.id}`);
                 
                 this.save();
+                this.sortBadges();
+                this.arrangeBadges(badge);
+                return this.badgeData[badge.id].favorite;
             }
 
             // • moveTo: move this badge to a specific tab and save it
@@ -424,15 +427,23 @@ class TabManager {
         let setMaster = false;
         if (badgeList == undefined || badgeList.length == 0) { badgeList = this.badges; setMaster = true; }
         badgeList = Array.from(badgeList).sort((badge1, badge2)=>{
-            let badge1TabIndex = this.tabData[this.badgeData[badge1.id].tabID]?.index + 1 || Infinity;
-            let badge2TabIndex = this.tabData[this.badgeData[badge2.id].tabID]?.index + 1 || Infinity;
+            let badgeComparisonData = [
+                {
+                    "tabIndex": this.tabData[this.badgeData[badge1.id].tabID]?.index + 1 || Infinity,
+                    "favorite": (this.badgeData[badge1.id].favorite) ? -1 : 0
+                }, {
+                    "tabIndex": this.tabData[this.badgeData[badge2.id].tabID]?.index + 1 || Infinity,
+                    "favorite": (this.badgeData[badge2.id].favorite) ? -1 : 0
+                }
+            ]
             
             // Sort the widgets by
-            // TODO: >>>> Favorited
+            // >>>> Favorited
             // >>>  Tab Index
             // >>   Status
             // >    Name
-            if (badge1TabIndex != badge2TabIndex) return badge1TabIndex - badge2TabIndex;
+            if (badgeComparisonData[0].tabIndex != badgeComparisonData[1].tabIndex) return badgeComparisonData[0].tabIndex - badgeComparisonData[1].tabIndex;
+            else if (badgeComparisonData[0].favorite != badgeComparisonData[1].favorite) return badgeComparisonData[0].favorite - badgeComparisonData[1].favorite;
             else if (badge1.status != badge2.status) return badge2.status - badge1.status;
             else return badge1.id.localeCompare(badge2.id);
         })
@@ -442,12 +453,28 @@ class TabManager {
     }
 
     // In the currently sorted order, add badges to their respective tabs
-    arrangeBadges() {
-        this.badges.forEach((badge)=>{
-            let tab = this.tabs.find((tab)=>{ return tab.id == this.badgeData[badge.id].tabID }) // Get the tab element that this badge belongs in
-            if (tab) tab.appendChild(badge); // If that tab exists, append the badge to the tab
-            else this.badgeContainer.appendChild(badge); // If not, append the badge to the container
-        })
+    arrangeBadges(specificBadge) {
+        if (specificBadge) {
+            let tab = this.tabs.find((tab)=>{ return tab.id == this.badgeData[specificBadge.id].tabID })
+            let specificBadgeIndex = this.badges.findIndex(badge => badge.id == specificBadge.id);
+            let precedingBadge = (specificBadgeIndex > 0) ? this.badges[specificBadgeIndex - 1] : null;
+            if (precedingBadge && this.badgeData[precedingBadge.id].tabID != this.badgeData[specificBadge.id].tabID) precedingBadge = null;
+
+            // insert specific badge into sorted position
+            if (tab) {
+                if (precedingBadge) insertAfter(precedingBadge, specificBadge);
+                else insertAfter(tab.children[0], specificBadge);
+            } else {
+                if (precedingBadge) insertAfter(precedingBadge, specificBadge);
+                else insertAfter(this.tabs[-1], specificBadge);
+            }
+        } else {
+            this.badges.forEach((badge)=>{
+                let tab = this.tabs.find((tab)=>{ return tab.id == this.badgeData[badge.id].tabID }) // Get the tab element that this badge belongs in
+                if (tab) tab.appendChild(badge); // If that tab exists, append the badge to the tab
+                else this.badgeContainer.appendChild(badge); // If not, append the badge to the container
+            })
+        }
     }
 
     showBadges() {
@@ -625,11 +652,17 @@ class TabManager {
         let menu = this.createAndConfigureElement("div", { className: "badge-menu", event: { name: "click", callback: (e)=>{e.stopPropagation()} } });
         menu.head = this.createAndConfigureElement("div", { className: "menu-head" });
         menu.body = this.createAndConfigureElement("div", { className: "menu-body" });
-        menu.favorite = this.createAndConfigureElement("button", {className: "badge-menu-btn favorite", event: { name: "click", callback: ()=>{} }});
+        menu.favorite = this.createAndConfigureElement("button", {className: "badge-menu-btn favorite" + " " + ((this.badgeData[badge.id].favorite) ? "filled" : ""), event: { name: "click", callback: (e)=>{
+            let isFavorite = badge.toggleFavorite(e);
+            if (isFavorite) menu.favorite.classList.add("filled");
+            else menu.favorite.classList.remove("filled");
+        }}});
+
         menu.new = this.createAndConfigureElement("button", {className: "badge-menu-btn new", event: { name: "click", callback: ()=>{
             menu.close();
             this.createNewTab(badge);
         }}});
+        
         badge.menu = menu;
         this.activeMenu = menu;
 
