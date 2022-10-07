@@ -466,7 +466,7 @@ class TabManager {
                 else insertAfter(tab.children[0], specificBadge);
             } else {
                 if (precedingBadge) insertAfter(precedingBadge, specificBadge);
-                else insertAfter(this.tabs[-1], specificBadge);
+                else insertAfter(this.tabs[this.tabs.length - 1], specificBadge);
             }
         } else {
             this.badges.forEach((badge)=>{
