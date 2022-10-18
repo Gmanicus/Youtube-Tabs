@@ -351,7 +351,7 @@
 
     height: fit-content;
     width: fit-content;
-    padding: 2px;
+    padding: 3px;
     border: 0 solid white;
 } .badge yt-img-shadow:hover {
     border: 2px solid white;
@@ -606,6 +606,24 @@
 } .badge-header-controls {
     display: flex;
     padding-right: 20px;
+}
+
+.ytt-subscribe-retractor::before {
+    content: var(--tabName, "");
+    position: absolute;
+    display: flex;
+    bottom: -100%;
+
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    align-items: center;
+
+    background-color: var(--tabColor);
+    border: 2px solid rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    color: var(--textColor, "white");
 }
 
 ::-webkit-scrollbar {

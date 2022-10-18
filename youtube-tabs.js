@@ -148,6 +148,23 @@ class TabManager {
         this.initializeBadges();
         this.initializeFeedImprover();
         this.initializeSubListener();
+        this.addSubscribeWidget();
+
+        let previousUrl = '';
+        let observer = new MutationObserver(() => {
+            if (location.href !== previousUrl) {
+                previousUrl = location.href;
+                console.log(`URL changed to ${location.href}`);
+
+                // Wait 0.5s for page to transition
+                setTimeout(this.addSubscribeWidget.bind(this), 500);
+            }
+        });
+        
+        observer.observe(document.querySelector("body"), {
+            childList: true,
+            subtree: true
+        });
     }
 
     logMessage(level, ...msg) {
@@ -782,10 +799,37 @@ class TabManager {
 
     }
 
+    // finds the '(un)subscribe' button on the page and adds the hover widget
+    addSubscribeWidget(retry) {
+        let subscribeBtn;
+
+        if (window.location.href.includes("watch?")) { // If we are on a video page
+            subscribeBtn = document.querySelector("#meta .ytd-subscribe-button-renderer[style-target]");
+        } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/")) { // If we are on a channel page
+            subscribeBtn = document.querySelector("#channel-header .ytd-subscribe-button-renderer[style-target]");
+        }
+
+        if (!retry && !subscribeBtn) { setTimeout(this.addSubscribeWidget.bind(this, true), 500); return; }
+        else if (retry && !subscribeBtn) return;
+
+        console.log("Got subscribe button", subscribeBtn);
+
+        let tab = this.tabData[this.badgeData[this.getChannelIDFromPage()].tabID]
+
+        // subscribeBtn.style.backgroundColor = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
+        subscribeBtn.classList.add("ytt-subscribe-retractor");
+        subscribeBtn.getBoundingClientRect(); // Trigger reflow
+        subscribeBtn.style.setProperty("--tabName", `"${tab.name}"`);
+        subscribeBtn.style.setProperty("--tabColor", tab.color);
+
+        // Color text to white or black depending on background color brightness
+        if (lightOrDark(tab.color) == "light") subscribeBtn.style.setProperty("--textColor", "#333");
+        else subscribeBtn.style.setProperty("--textColor", "white");
+    }
+
     // ▲ HELPER FUNCTIONS ▲
 
     getChannelIDFromPage() {
-        // wait .5s to let page set
         if (window.location.href.includes("watch?")) { // If we are on a video page
             let id = document.querySelector("#upload-info[class*='style-scope']").querySelector("a").innerHTML;
             return id;
@@ -793,6 +837,11 @@ class TabManager {
             let id = document.getElementById("inner-header-container").querySelector("#text").innerHTML;
             return id;
         }
+    }
+
+    getChannelIDFromBadge(badge) {
+        let channel = badge.children[0].title;
+        return channel; // channel IDs are either custom channel names or auto-generated IDs. I.e, they are inconsistent and can no longer be used
     }
 
     isInViewport(elem) {
@@ -828,11 +877,6 @@ class TabManager {
         else if (typeof style == "object") Object.assign(element.style, style); 
     }
 
-    getChannelIDFromBadge(badge) {
-        let channel = badge.children[0].title;
-        return channel; // channel IDs are either custom channel names or auto-generated IDs. I.e, they are inconsistent and can no longer be used
-    }
-
     save() {
         localStorage.setItem("ytt-badges", JSON.stringify(this.badgeData));
         localStorage.setItem("ytt-tabs", JSON.stringify(this.tabData));
@@ -851,6 +895,44 @@ function insertAfter(referenceNode, newNode) {
 
 function moveElementsTo(newParent, ...children) { children.forEach((child)=>newParent.appendChild(child)); }
 
+// https://awik.io/determine-color-bright-dark-using-javascript/
+function lightOrDark(color) {
+
+    // Variables for red, green, blue values
+    var r, g, b, hsp;
+    
+    // Check the format of the color, HEX or RGB?
+    if (color.match(/^rgb/)) {
+
+        // If RGB --> store the red, green, blue values in separate variables
+        color = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/);
+        
+        r = color[1];
+        g = color[2];
+        b = color[3];
+    } 
+    else {
+        
+        // If hex --> Convert it to RGB: http://gist.github.com/983661
+        color = +("0x" + color.slice(1).replace( 
+        color.length < 5 && /./g, '$&$&'));
+
+        r = color >> 16;
+        g = color >> 8 & 255;
+        b = color & 255;
+    }
+    
+    // HSP (Highly Sensitive Poo) equation from http://alienryderflex.com/hsp.html
+    hsp = Math.sqrt(
+        0.299 * (r * r) +
+        0.587 * (g * g) +
+        0.114 * (b * b)
+    );
+
+    // Using the HSP value, determine whether the color is light or dark
+    if (hsp>127.5) return 'light';
+    else return 'dark';
+}
 
 
 function waitForPageLoad() {
@@ -1026,20 +1108,20 @@ function addSubListeners(nodes) {
     }
 }
 
-function addSubscribeWidget(btn) {
-    if (btn.childNodes.length == 0) { return; }
-    if (subscriptionWidgetPromise) { clearInterval(subscriptionWidgetPromise); } // Shutdown any previous custom "watchForSubscribeChange" promises
-    let oldBtn = document.getElementsByClassName("sub-widget")[0]; if (oldBtn) { oldBtn.remove(); } // Remove any old subscribe widgets
+// function addSubscribeWidget(btn) {
+//     if (btn.childNodes.length == 0) { return; }
+//     if (subscriptionWidgetPromise) { clearInterval(subscriptionWidgetPromise); } // Shutdown any previous custom "watchForSubscribeChange" promises
+//     let oldBtn = document.getElementsByClassName("sub-widget")[0]; if (oldBtn) { oldBtn.remove(); } // Remove any old subscribe widgets
 
-    let subWidget = document.createElement("div"); subWidget.className = "sub-widget";
-    getChannelIDFromPage(function(id) { subWidget.id = id}); // set ID after getting data from callback
+//     let subWidget = document.createElement("div"); subWidget.className = "sub-widget";
+//     getChannelIDFromPage(function(id) { subWidget.id = id}); // set ID after getting data from callback
     
-    btn.childNodes[0].appendChild(subWidget);
-    subWidget.addEventListener("click", subMenu);
+//     btn.childNodes[0].appendChild(subWidget);
+//     subWidget.addEventListener("click", subMenu);
 
-    subscriptionWidgetPromise = watchForSubscribeChange(btn, adaptSubscribeWidget)
-    adaptSubscribeWidget(btn); // adapt subscribe widget for current subscription status
-}
+//     subscriptionWidgetPromise = watchForSubscribeChange(btn, adaptSubscribeWidget)
+//     adaptSubscribeWidget(btn); // adapt subscribe widget for current subscription status
+// }
 
 
 
