@@ -805,9 +805,11 @@ class TabManager {
 
         if (window.location.href.includes("watch?")) { // If we are on a video page
             subscribeBtn = document.querySelector("#meta .ytd-subscribe-button-renderer[style-target]");
-        } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/")) { // If we are on a channel page
+        } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/") || window.location.href.includes("https://www.youtube.com/user/")) { // If we are on a channel page
             subscribeBtn = document.querySelector("#channel-header .ytd-subscribe-button-renderer[style-target]");
         }
+
+        console.log("Subscribe button element", subscribeBtn);
 
         if (!retry && !subscribeBtn) { setTimeout(this.addSubscribeWidget.bind(this, true), 500); return; }
         else if (retry && !subscribeBtn) return;
@@ -819,11 +821,16 @@ class TabManager {
         // subscribeBtn.style.backgroundColor = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
         subscribeBtn.classList.add("ytt-subscribe-retractor");
         subscribeBtn.getBoundingClientRect(); // Trigger reflow
-        subscribeBtn.style.setProperty("--tabName", `"${tab.name}"`);
-        subscribeBtn.style.setProperty("--tabColor", tab.color);
+        if (tab) {
+            subscribeBtn.style.setProperty("--tabName", `"${tab.name}"`);
+            subscribeBtn.style.setProperty("--tabColor", tab.color);
+        } else {
+            subscribeBtn.style.setProperty("--tabName", `"No Tab"`);
+            subscribeBtn.style.setProperty("--tabColor", "black");
+        }
 
         // Color text to white or black depending on background color brightness
-        if (lightOrDark(tab.color) == "light") subscribeBtn.style.setProperty("--textColor", "#333");
+        if (lightOrDark(tab?.color || "black") == "light") subscribeBtn.style.setProperty("--textColor", "#333");
         else subscribeBtn.style.setProperty("--textColor", "white");
     }
 
