@@ -655,7 +655,7 @@ class TabManager {
     help() {}
 
     createNewTab(badge) {
-        let newTab = this.createTab("", new Date().getTime());
+        let newTab = this.createTab("", new Date().getTime(), getRandomColor());
         this.tabData.insert(newTab, 0);
         if (badge) badge.moveTo(newTab.id);
         this.tabOptions(newTab);
@@ -939,6 +939,16 @@ function lightOrDark(color) {
     // Using the HSP value, determine whether the color is light or dark
     if (hsp>127.5) return 'light';
     else return 'dark';
+}
+
+// https://stackoverflow.com/a/1484514/10949443
+function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
 }
 
 
