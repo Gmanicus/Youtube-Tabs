@@ -661,7 +661,12 @@ class TabManager {
         this.tabOptions(newTab);
     }
 
-    badgeOptions(badge) {
+    /** Opens the subscription badge options menu
+     * 
+     * @param {*} badge - The target subscriber badge
+     * @param {*} popupHost - The element to append this menu to. Defaults to the badge
+     */
+    badgeOptions(badge, popupHost) {
         if (this.modal) this.activeMenu?.close();
         this.modal = true;
         
@@ -695,7 +700,12 @@ class TabManager {
         // Start adding elements to DOM
         moveElementsTo(menu.head, ...[menu.favorite, menu.new]);
         appendChildren(menu, [menu.head, menu.body]);
-        badge.appendChild(menu);
+        if (popupHost) {
+            // append menu to the page so that it can be interactable above the modal overlay
+            let page = document.getElementById("page-manager");
+            page.appendChild(menu);
+        }
+        else badge.appendChild(menu);
 
         // Generate tab selection list and append to menu in the order that they appear in the side-panel
         Object.nonFunctionKeys(this.tabData).sort((tabA, tabB) => this.tabData[tabA].index - this.tabData[tabB].index).forEach(tabKey => {
@@ -709,15 +719,22 @@ class TabManager {
             menu.body.appendChild(item);
         })
         
-        // Set menu position to be right of the badge and centered vertically
-        let viewportPosition = menu.getBoundingClientRect();
-        let difference = {x:0, y:-menu.offsetHeight/2 + badge.offsetHeight/2};
-        
-        if (viewportPosition.top + difference.y < 60) difference.y = 60 - viewportPosition.top;
-        if (viewportPosition.bottom + difference.y > window.innerHeight) difference.y = window.innerHeight - viewportPosition.bottom;
+        if (!popupHost) {
+            // Set menu position to be right of the badge and centered vertically
+            let viewportPosition = menu.getBoundingClientRect();
+            let difference = {x:0, y:-menu.offsetHeight/2 + badge.offsetHeight/2};
+            
+            if (viewportPosition.top + difference.y < 60) difference.y = 60 - viewportPosition.top;
+            if (viewportPosition.bottom + difference.y > window.innerHeight) difference.y = window.innerHeight - viewportPosition.bottom;
 
-        menu.style.left = `${difference.x + badge.offsetWidth}px`;
-        menu.style.top = `${difference.y}px`;
+            menu.style.left = `${difference.x + badge.offsetWidth}px`;
+            menu.style.top = `${difference.y}px`;
+        } else {
+            // Set menu position to be right of the host and centered vertically
+            let viewportPosition = popupHost.getBoundingClientRect();
+            menu.style.left = `${viewportPosition.x}px`;
+            menu.style.top = `${viewportPosition.y}px`;
+        }
     }
 
     tabOptions(tab) {
@@ -816,10 +833,12 @@ class TabManager {
 
         console.log("Got subscribe button", subscribeBtn);
 
-        let tab = this.tabData[this.badgeData[this.getChannelIDFromPage()].tabID]
+        let targetChannel = this.getChannelIDFromPage();
+        let tab = this.tabData[this.badgeData[targetChannel].tabID]
 
         // subscribeBtn.style.backgroundColor = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
-        subscribeBtn.classList.add("ytt-subscribe-retractor");
+        if (subscribeBtn.retractor) subscribeBtn.retractor.remove();
+        subscribeBtn.retractor = this.createAndConfigureElement("span", { className: "ytt-subscribe-retractor" });
         subscribeBtn.getBoundingClientRect(); // Trigger reflow
         if (tab) {
             subscribeBtn.style.setProperty("--tabName", `"${tab.name}"`);
@@ -828,6 +847,12 @@ class TabManager {
             subscribeBtn.style.setProperty("--tabName", `"No Tab"`);
             subscribeBtn.style.setProperty("--tabColor", "black");
         }
+
+        subscribeBtn.appendChild(subscribeBtn.retractor);
+        subscribeBtn.retractor.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.badgeOptions(this.badges.find((b) => b.id == targetChannel), subscribeBtn);
+        })
 
         // Color text to white or black depending on background color brightness
         if (lightOrDark(tab?.color || "black") == "light") subscribeBtn.style.setProperty("--textColor", "#333");
