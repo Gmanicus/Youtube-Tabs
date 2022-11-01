@@ -150,6 +150,11 @@ class TabManager {
         this.initializeSubListener();
         this.addSubscribeWidget();
 
+        if (this.isLightTheme()) {
+            this.logMessage("info", "MY EYES! We're in light-theme! 😵")
+            document.querySelector("ytd-app").classList.add("ytt-light-theme");
+        } else this.logMessage("info", "We're in dark-theme 😎")
+
         let previousUrl = '';
         let observer = new MutationObserver(() => {
             if (location.href !== previousUrl) {
@@ -435,6 +440,12 @@ class TabManager {
 
                 subsUpdate.observe(this.badgeContainer, { childList: true });
             }
+
+            setTimeout(() => {
+                // The subscribe button now resets on Youtube when the subscribe status is changed, so refresh our sub widget
+                // Wait momentarily because refreshing immediately after sub change doesn't work
+                this.addSubscribeWidget();
+            }, 250)
         })
     }
 
@@ -731,6 +742,7 @@ class TabManager {
             menu.style.top = `${difference.y}px`;
         } else {
             // Set menu position to be right of the host and centered vertically
+            menu.style.position = "fixed";
             let viewportPosition = popupHost.getBoundingClientRect();
             menu.style.left = `${viewportPosition.x}px`;
             menu.style.top = `${viewportPosition.y}px`;
@@ -821,9 +833,9 @@ class TabManager {
         let subscribeBtn;
 
         if (window.location.href.includes("watch?")) { // If we are on a video page
-            subscribeBtn = document.querySelector("#meta .ytd-subscribe-button-renderer[style-target]");
+            subscribeBtn = document.querySelector("#owner .ytd-subscribe-button-renderer");
         } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/") || window.location.href.includes("https://www.youtube.com/user/")) { // If we are on a channel page
-            subscribeBtn = document.querySelector("#channel-header .ytd-subscribe-button-renderer[style-target]");
+            subscribeBtn = document.querySelector("#channel-header .ytd-subscribe-button-renderer");
         }
 
         console.log("Subscribe button element", subscribeBtn);
@@ -835,6 +847,7 @@ class TabManager {
 
         let targetChannel = this.getChannelIDFromPage();
         let tab = this.tabData[this.badgeData[targetChannel].tabID]
+        let subscribed = Array.from(this.badges).find((badge) => badge.id == targetChannel) != undefined;
 
         // subscribeBtn.style.backgroundColor = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
         if (subscribeBtn.retractor) subscribeBtn.retractor.remove();
@@ -848,6 +861,9 @@ class TabManager {
             subscribeBtn.style.setProperty("--tabColor", "black");
         }
 
+        if (subscribed) { subscribeBtn.classList.add("subscribed"); subscribeBtn.classList.remove("unsubscribed") }
+        else            { subscribeBtn.classList.remove("subscribed"); subscribeBtn.classList.add("unsubscribed") }
+
         subscribeBtn.appendChild(subscribeBtn.retractor);
         subscribeBtn.retractor.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -855,7 +871,7 @@ class TabManager {
         })
 
         // Color text to white or black depending on background color brightness
-        if (lightOrDark(tab?.color || "black") == "light") subscribeBtn.style.setProperty("--textColor", "#333");
+        if (lightOrDark(tab?.color || "black") == "light") subscribeBtn.style.setProperty("--textColor", "black");
         else subscribeBtn.style.setProperty("--textColor", "white");
     }
 
@@ -885,6 +901,13 @@ class TabManager {
             bounding.right <= (window.innerWidth || document.documentElement.clientWidth)
         );
     };
+
+    isLightTheme() {
+        let style = window.getComputedStyle(document.querySelector("ytd-app"));
+        let color = style.getPropertyValue("--yt-spec-base-background").replace(" ", "");
+
+        return lightOrDark(color) == "light";
+    }
 
     createAndConfigureElement(type, properties) {
         let newNode = document.createElement(type);

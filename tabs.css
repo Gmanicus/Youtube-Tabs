@@ -8,7 +8,7 @@
 
 #page-manager.modal::after {
     content: "";
-    position: fixed;
+    position: absolute;
     z-index: 2000;
     width: 100%;
     height: 100%;
@@ -52,7 +52,7 @@
 .ruler {
     width: 100%;
     height: 1px;
-    background-color: var(--bd-color);
+    background-color: var(--yt-spec-10-percent-layer);
     margin-bottom: 1.5rem;
 }
 
@@ -129,10 +129,10 @@
     padding: 32px;
 
     pointer-events: all;
-    color: var(--text-color);
-    background-color: var(--bg-color);
+    color: var(--yt-spec-text-primary);
+    background-color: var(--yt-spec-base-background);
     border-radius: var(--bd-radius);
-    border: 1px solid var(--bd-color);
+    border: 1px solid var(--yt-spec-10-percent-layer);
     box-shadow: rgb(0 0 0 / 67%) 500px 0px 500px -500px inset;
     /* width: 50px;
     height: 50px; */
@@ -148,7 +148,7 @@
     max-width: 256px;
     --paper-item-min-height: 40px;
 } .new-badge-popup .badge-menu {
-    box-shadow: 0 0 16px 1px #000000aa;
+    box-shadow: 0 0 16px 1px rgb(0 0 0 / 16%);
 }
 
 .btn {
@@ -171,8 +171,8 @@
     padding: 4px;
     color: white;
     font-size: 12px;
-    background-color: var(--bg-color);
-    border: 1px solid var(--bd-color)
+    background-color: var(--yt-spec-base-background);
+    border: 1px solid var(--yt-spec-10-percent-layer)
 }
 
 .tab { /* TAB OPEN */
@@ -204,7 +204,7 @@
     box-sizing: border-box;
     transition: 0.05s 0.05s all ease-in-out;
 } .tab:last-of-type {
-    box-shadow: -2px 6px 6px 0 #0000005a;
+    box-shadow: -2px 6px 6px 0 rgb(0 0 0 / 16%);
     margin-bottom: 6px;
     border-bottom-right-radius: 20px;
 } .tab.closed {
@@ -269,7 +269,7 @@
     display: inline-block;
     flex: 1;
     margin-left: 30px;
-    color: var(--text-color-dim);
+    color: var(--yt-spec-text-primary);
     font-weight: lighter;
     user-select: none;
 }
@@ -337,10 +337,11 @@
 .badge {
     user-select: none;
     z-index: 1;
+    width: 100% !important;
 } .badge:hover > .badge-retractor {
     width: calc(100% + 36px);
-    border: solid 1px var(--bd-color);
-    background-color: var(--bg-color);
+    border: solid 1px var(--yt-spec-10-percent-layer);
+    background-color: var(--yt-spec-base-background);
 } .badge:hover > .badge-retractor::after {
     opacity: 1;
     visibility: inherit;
@@ -413,15 +414,15 @@
     z-index: 10000;
 
     border-radius: var(--bd-radius);
-    border: 1px solid var(--bd-color);
-    border-left: 1px solid var(--bd-color-dark);
-    background-color: var(--bg-color);
-    box-shadow: inset 16px 0 16px -16px #000000aa, 16px 16px 16px -16px #000000aa;
+    border: 1px solid var(--yt-spec-10-percent-layer);
+    border-left: 1px solid rgb(0 0 0 / 30%);
+    background-color: var(--yt-spec-base-background);
+    box-shadow: inset 16px 0 16px -16px rgb(0 0 0 / 20%), 16px 16px 16px -16px rgb(0 0 0 / 20%);
 } .menu-head {
     display: flex;
     justify-content: space-between;
     padding: 8px 20px;
-    border-bottom: 2px solid var(--bd-color);
+    border-bottom: 2px solid var(--yt-spec-10-percent-layer);
     /* box-shadow: 0 6px 6px 0 #0000005a; */
 } .menu-body {
     padding: 8px 20px;
@@ -439,7 +440,7 @@
     transition: all 0.1s ease-in-out
     /* filter: drop-shadow(0 2px 0px black); */
 } .badge-menu-btn:hover {
-    /* border: 1px solid var(--bd-color); */
+    /* border: 1px solid var(--yt-spec-10-percent-layer); */
     transform: scale(1.2);
 } .badge-menu-btn.favorite {
     background-image: url('https://i.imgur.com/RHEXSmp.png');
@@ -460,9 +461,9 @@
     background-color: transparent;
     font-size: 12px;
     text-overflow: ellipsis;
-    color: var(--text-color);
+    color: var(--yt-spec-text-primary);
     border: none;
-    /* border-bottom: 1px solid var(--bd-color); */
+    /* border-bottom: 1px solid var(--yt-spec-10-percent-layer); */
 } .tab-selector::before {
     content: "";
     position: absolute;
@@ -484,7 +485,7 @@
     min-height: 10px;
     min-width: 10px;
     margin-left: 3px;
-    border: 3px solid var(--bd-color);
+    border: 3px solid var(--yt-spec-10-percent-layer);
 }
 
 .sub {
@@ -611,8 +612,8 @@
 .ytt-subscribe-retractor {
     position: absolute;
     width: 100%;
-    height: 60%;
-    bottom: 0;
+    height: 100%;
+    bottom: 30%;
 
     transition: all 0.15s ease-in-out;
     background-color: transparent;
@@ -620,10 +621,15 @@
     transform: translateZ(-1px);
     padding: 0 !important;
 } .ytd-subscribe-button-renderer:hover > .ytt-subscribe-retractor {
-    bottom: -60%;
-    border-radius: 3px;
+    bottom: -70%;
+} .ytd-subscribe-button-renderer:hover > .ytt-subscribe-retractor:before {
+    border-radius: 0 0 18px 18px;
+    height: 120%;
+    padding-top: 15%;
+    border: 0px solid rgba(0, 0, 0, 0.5);
 } .ytt-subscribe-retractor:hover::before {
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    cursor: pointer;
 }.ytt-subscribe-retractor::before {
     content: var(--tabName, "");
     position: absolute;
@@ -631,22 +637,25 @@
     bottom: 0;
 
     width: 100%;
-    height: 100%;
+    height: 0;
+    padding-top: 0;
     box-sizing: border-box;
     justify-content: center;
     align-items: center;
     transition: all 0.15s ease-in-out;
+    overflow: hidden;
 
     background-color: var(--tabColor);
     color: var(--textColor, "white");
-    border: 2px solid rgba(0, 0, 0, 0.5);
-    border-radius: 3px;
+    font-size: 14px;
+    border: 0px solid rgba(0, 0, 0, 0.5);
+    border-radius: 22px;
 }
 
-tp-yt-paper-button.ytd-subscribe-button-renderer {
+yt-button-shape.ytd-subscribe-button-renderer {
     transform-style: preserve-3d;
-} tp-yt-paper-button.ytd-subscribe-button-renderer[subscribed] {
-    background-color: #303030 !important;
+} .ytd-subscribe-button-renderer.subscribed > button {
+    background-color: #3E3F3E !important;
 }
 
 ::-webkit-scrollbar {
@@ -655,4 +664,24 @@ tp-yt-paper-button.ytd-subscribe-button-renderer {
     background: #eee;
 } ::-webkit-scrollbar-thumb {
     background: #888;
+}
+
+
+
+
+/* !! LIGHT THEME !! */
+
+/* Subscribe button */
+.ytt-light-theme .ytd-subscribe-button-renderer.subscribed > button {
+    background-color: #F2F3F3 !important;
+}
+
+/* Tab hover zone */
+.ytt-light-theme .hover-zone:hover {
+    box-shadow: inset -90px 0 70px -80px rgba(0, 0, 0, 0.3);
+}
+
+/* YTT Buttons */
+.ytt-light-theme .tab-menu-btn, .ytt-light-theme .badge-menu-btn, .ytt-light-theme .btn, .ytt-light-theme .badge-retractor::after {
+    filter: invert(1);
 }
