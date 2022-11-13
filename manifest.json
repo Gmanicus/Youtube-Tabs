@@ -1,8 +1,8 @@
 {
   "name": "Youtube Tabs",
   "description": "Tidy up your Youtube subscription list with tab organization features",
-  "version": "1.5.2",
-  "manifest_version": 3,
+  "version": "2.0.0",
+  "manifest_version": 2,
   "icons": {
     "128": "icon.png",
     "48": "icon.png"
@@ -11,8 +11,8 @@
     {
       "matches": ["https://www.youtube.com/*"],
       "js": ["iro.min.js", "youtube-tabs.js"],
-      "css": ["tabs.css"],
-      "html": ["pop-up.html"]
+      "css": ["tabs.css"]
     }
-  ]
+  ],
+  "web_accessible_resources": ["help.html"]
 }

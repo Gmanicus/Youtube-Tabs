@@ -101,14 +101,8 @@ class TabManager {
         this.version = null;
         try { this.version = browser.runtime.getManifest().version; }
         catch (e) {
-            try { ver = chrome.runtime.getManifest().version; }
+            try { this.version = chrome.runtime.getManifest().version; }
             catch (e) { this.logMessage("info", "Unable to get version from manifest") }
-        }
-        
-        // Update the version stored in localStorage
-        if (localStorage.getItem("youtube_tabs_version") != this.version) {
-            localStorage.setItem("youtube_tabs_version", this.version);
-            // help();
         }
 
         if (this.version) this.logMessage("info", `Running version ${this.version}`)
@@ -152,14 +146,13 @@ class TabManager {
 
         if (this.isLightTheme()) {
             this.logMessage("info", "MY EYES! We're in light-theme! 😵")
-            document.querySelector("ytd-app").classList.add("ytt-light-theme");
+            document.body.classList.add("ytt-light-theme");
         } else this.logMessage("info", "We're in dark-theme 😎")
 
         let previousUrl = '';
         let observer = new MutationObserver(() => {
             if (location.href !== previousUrl) {
                 previousUrl = location.href;
-                console.log(`URL changed to ${location.href}`);
 
                 // Wait 0.5s for page to transition
                 setTimeout(this.addSubscribeWidget.bind(this), 500);
@@ -170,6 +163,13 @@ class TabManager {
             childList: true,
             subtree: true
         });
+
+        // Update the version stored in localStorage
+        // Display the help menu if the version is new
+        if (localStorage.getItem("ytt_version") != this.version) {
+            localStorage.setItem("ytt_version", this.version);
+            this.help();
+        }
     }
 
     logMessage(level, ...msg) {
@@ -647,12 +647,12 @@ class TabManager {
 
         // Configure tab elements
         newTab.header = this.createAndConfigureElement("div", {className: "tab-menu"});
+        newTab.expand = this.createAndConfigureElement("button", {className: "tab-menu-btn expand-arrow", event: { name: "click", callback: newTab.toggle }});
         newTab.edit = this.createAndConfigureElement("button", {className: "tab-menu-btn edit-back", event: { name: "click", callback: this.tabOptions.bind(this, newTab) }});
         newTab.delete = this.createAndConfigureElement("button", {className: "tab-menu-btn delete-back", event: { name: "click", callback: newTab.delete }});
-        newTab.expand = this.createAndConfigureElement("button", {className: "tab-menu-btn expand-arrow", event: { name: "click", callback: newTab.toggle }});
         newTab.grab = this.createAndConfigureElement("span", {className: "hover-zone", event: { name: "mousedown", callback: newTab.grab }});
         
-        moveElementsTo(newTab.header, ...[newTab.edit, newTab.delete, newTab.expand, newTab.grab]);
+        moveElementsTo(newTab.header, ...[newTab.expand, newTab.edit, newTab.delete, newTab.grab]);
         newTab.header.appendChild(this.createAndConfigureElement("h3", {innerHTML: title?.toUpperCase() || "", className: "tab-menu-name"}));
         newTab.appendChild(newTab.header);
 
@@ -663,7 +663,34 @@ class TabManager {
 
     // ◙ ACTIONS ◙
 
-    help() {}
+    help() {
+        if (this.modal) this.activeMenu.close();
+        this.modal = true;
+
+        let popUp = this.createAndConfigureElement("div", { className: "ytt-popup" });
+        popUp.exit = this.createAndConfigureElement("btn", { className: "exit" });
+        popUp.body = this.createAndConfigureElement("div", { className: "popup-body" });
+        this.activePage = popUp;
+        
+        popUp.close = () => {
+            popUp.remove();
+            this.activeMenu?.close();
+            this.modal = false;
+        }
+
+        // Get included help menu HTML
+        let url = chrome.runtime.getURL("help.html");
+        console.log(url);
+        let xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (this.readyState!==4) return;
+            popUp.body.innerHTML = this.responseText;
+        };
+        xhr.send();
+
+        moveElementsTo(popUp, ...[popUp.exit, popUp.body]);
+        document.body.appendChild(popUp);
+    }
 
     createNewTab(badge) {
         let newTab = this.createTab("", new Date().getTime(), getRandomColor());
@@ -838,12 +865,8 @@ class TabManager {
             subscribeBtn = document.querySelector("#channel-header .ytd-subscribe-button-renderer");
         }
 
-        console.log("Subscribe button element", subscribeBtn);
-
         if (!retry && !subscribeBtn) { setTimeout(this.addSubscribeWidget.bind(this, true), 500); return; }
         else if (retry && !subscribeBtn) return;
-
-        console.log("Got subscribe button", subscribeBtn);
 
         let targetChannel = this.getChannelIDFromPage();
         let tab = this.tabData[this.badgeData[targetChannel].tabID]

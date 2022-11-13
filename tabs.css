@@ -126,10 +126,12 @@
     transform: translate(-50%, -50%);
 
     min-width: 25%;
+    max-width: 30%;
     padding: 32px;
 
     pointer-events: all;
     color: var(--yt-spec-text-primary);
+    font-size: 1.4rem;
     background-color: var(--yt-spec-base-background);
     border-radius: var(--bd-radius);
     border: 1px solid var(--yt-spec-10-percent-layer);
