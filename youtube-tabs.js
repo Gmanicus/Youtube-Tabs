@@ -683,8 +683,8 @@ class TabManager {
 
         // Get included help menu HTML
         let url = chrome.runtime.getURL("help.html");
-        console.log(url);
         let xhr = new XMLHttpRequest();
+        xhr.open("GET", url);
         xhr.onreadystatechange = function() {
             if (this.readyState!==4) return;
             popUp.body.innerHTML = this.responseText;
