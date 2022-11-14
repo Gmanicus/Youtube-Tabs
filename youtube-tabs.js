@@ -45,6 +45,9 @@ window.onload = function() {
     }, 100)
 }
 
+// If the page has already loaded before our extension, fire immediately
+if (document.readyState === "complete") window.onload();
+
 Object.nonFunctionKeys = (obj) => {
     return Object.keys(obj).filter((key) => typeof obj[key] != "function")
 }
