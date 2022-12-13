@@ -127,7 +127,9 @@
 
     min-width: 25%;
     max-width: 30%;
+    max-height: 75vh;
     padding: 32px;
+    overflow: auto;
 
     pointer-events: all;
     color: var(--yt-spec-text-primary);
@@ -142,6 +144,7 @@
 
 .new-badge-popup {
     min-width: fit-content;
+    overflow: visible;
 } .new-badge-popup .popup-body {
     display: flex;
     flex-direction: column;
