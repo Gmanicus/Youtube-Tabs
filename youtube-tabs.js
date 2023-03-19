@@ -93,12 +93,17 @@ class TabManager {
                 deprecatedBadgeData[badge] = { "tabID": deprecatedBadgeData[badge], "favorite": false }
             })
             localStorage.setItem("ytt-badges", JSON.stringify(deprecatedBadgeData));
+            localStorage.removeItem("subscription_links");
         } if (localStorage.getItem("subscription_tabs")) {
             localStorage.setItem("ytt-tabs", localStorage.getItem("subscription_tabs"));
+            localStorage.removeItem("subscription_tabs");
         }
 
         this.badgeData = JSON.parse(localStorage.getItem("ytt-badges")) || {};
         this.tabData = JSON.parse(localStorage.getItem("ytt-tabs")) || {};
+
+        // this.logMessage('info', 'Attempting to save data');
+        // this.exportData();
 
         // Retrieve version stored in the manifest
         this.version = null;
@@ -969,6 +974,31 @@ class TabManager {
     save() {
         localStorage.setItem("ytt-badges", JSON.stringify(this.badgeData));
         localStorage.setItem("ytt-tabs", JSON.stringify(this.tabData));
+    }
+
+    async exportData() {
+        let options = {
+            suggestedName: `ytt-backup ${new Date().toDateString()}`,
+            types: [
+                {
+                    description: `JSON file`,
+                    accept: {
+                        'application/json': ['.json'],
+                    },
+                },
+            ],
+        };
+        let fileHandle = await window.showSaveFilePicker(options);
+
+        let exportContent = {
+            version: this.version,
+            badges: this.badgeData,
+            tabs: this.tabData
+        }
+
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(exportContent));
+        await writable.close();
     }
 }
 
