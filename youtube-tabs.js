@@ -102,9 +102,6 @@ class TabManager {
         this.badgeData = JSON.parse(localStorage.getItem("ytt-badges")) || {};
         this.tabData = JSON.parse(localStorage.getItem("ytt-tabs")) || {};
 
-        // this.logMessage('info', 'Attempting to save data');
-        // this.exportData();
-
         // Retrieve version stored in the manifest
         this.version = null;
         try { this.version = browser.runtime.getManifest().version; }
@@ -178,6 +175,10 @@ class TabManager {
             localStorage.setItem("ytt_version", this.version);
             this.help();
         }
+
+        // Listen for import/export requests
+        document.addEventListener('ytt-import', this.importData.bind(this));
+        document.addEventListener('ytt-export', this.exportData.bind(this));
     }
 
     logMessage(level, ...msg) {
@@ -977,28 +978,52 @@ class TabManager {
     }
 
     async exportData() {
-        let options = {
-            suggestedName: `ytt-backup ${new Date().toDateString()}`,
-            types: [
-                {
-                    description: `JSON file`,
-                    accept: {
-                        'application/json': ['.json'],
-                    },
-                },
-            ],
-        };
-        let fileHandle = await window.showSaveFilePicker(options);
-
         let exportContent = {
             version: this.version,
             badges: this.badgeData,
             tabs: this.tabData
         }
 
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(exportContent));
-        await writable.close();
+        let file = new Blob([JSON.stringify(exportContent)], {type: 'application/json'});
+        let a = document.createElement("a");
+        a.href = URL.createObjectURL(file);
+        a.download = `ytt-backup ${new Date().toDateString()}`;
+        a.click(); URL.revokeObjectURL(a.href);
+    }
+
+    async importData() {
+        if (!document.getElementById('upload-file-picker').files[0]) return; // User hit cancel on select file prompt. End early
+        let confirmation = confirm("Importing backup\n\nAre you sure you want to do this?\n\nTHIS WILL OVERWRITE ALL OF YOUR EXISTING TAB DATA.\nThis will also refresh the current page.")
+        if (confirmation) {
+            this.parseJsonFile(document.getElementById('upload-file-picker').files[0])
+                .then((data) => {
+                    if (!data.version || !data.badges || !data.tabs) {
+                        alert("Unable to find all expected data within the data backup.\n\nThis may be the wrong file, or the data didn't save properly, or the file was corrupted/improperly modifed.\n\nImporting process has been aborted. Your data has not changed.")
+                    } else {
+                        this.badgeData = data.badges;
+                        this.tabData = data.tabs;
+                        this.save();
+                        window.location.reload();
+                    }
+                })
+                .catch((e) => alert("Could not import file. Error while parsing data. Maybe that was the wrong file?\n\nImporting process has been aborted. Your data has not changed."));
+        }
+    }
+
+    // https://stackoverflow.com/a/66387148/10949443
+    async parseJsonFile(file) {
+        return new Promise((resolve, reject) => {
+            const fileReader = new FileReader()
+            fileReader.onload = event => {
+                try {
+                    resolve(JSON.parse(event.target.result));
+                } catch {
+                    reject(new Error('Unable to read file'));
+                }
+            }
+            fileReader.onerror = error => reject(error);
+            fileReader.readAsText(file);
+        })
     }
 }
 

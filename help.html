@@ -1,11 +1,28 @@
 
+
+<label id="upload-backup" class="tab-menu-btn" title="Upload tab data backup">
+    <input id="upload-file-picker" type="file" onchange="document.dispatchEvent(Event('ytt-import'))" accept=".json"></input>
+</label>
+<span id="export-backup" class="tab-menu-btn" title="Export tab data backup" onclick="document.dispatchEvent(Event('ytt-export'))"></span>
 <h1 style="text-align: center;">Youtube Tabs</h1>
+
+<h3 style="text-align: center;">Version 2.0.5</h3>
+<h6 style="text-align: center;">Apr. 1st 2023</h3>
+<br>
+<p>
+    • Added an export and import feature so that tab data can be saved offline and reimported in case of data loss.
+    <br>
+    • No, this is not an April Fools joke.
+</p>
+
+<br><br>
 
 <h3 style="text-align: center;">Version 2.0.4</h3>
 <h6 style="text-align: center;">Jan. 2nd 2022</h3>
 <br>
 <p>
-    • Bug fix: Fixed an issue where the old localstorage objects were migrated but not deleted, causing saving to no longer work for users who existed before version 2.0.0 (Sorry about that! Thanks for reporting this Kaiserd)
+    • Bug fix: Fixed an issue where the old localstorage objects were migrated but not deleted, causing saving to no longer work for users who existed before version 2.0.0 (Sorry about that! Thanks for reporting this Kaiserd).
+    <br>
     • Happy New Year! Have a blessed 2023!
 </p>
 
