@@ -897,8 +897,8 @@ class TabManager {
             subscribeBtn.style.setProperty("--tabColor", "black");
         }
 
-        if (subscribed) { subscribeBtn.classList.add("subscribed"); subscribeBtn.classList.remove("unsubscribed") }
-        else            { subscribeBtn.classList.remove("subscribed"); subscribeBtn.classList.add("unsubscribed") }
+        if (subscribed) { subscribeBtn.classList.add("subscribed"); subscribeBtn.classList.remove("unsubscribed"); }
+        else            { subscribeBtn.classList.remove("subscribed"); subscribeBtn.classList.add("unsubscribed"); }
 
         subscribeBtn.appendChild(subscribeBtn.retractor);
         subscribeBtn.retractor.addEventListener("click", (e) => {
