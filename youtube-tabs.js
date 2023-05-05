@@ -434,6 +434,7 @@ class TabManager {
 
                 oldBadge.remove();
                 this.badges.splice(oldBadgeIndex, 1);
+                document.getElementsByClassName('ytt-subscribe-retractor')?.[0]?.remove();
             } else {
                 this.logMessage("info", "Subscribed to", id)
 
@@ -874,7 +875,7 @@ class TabManager {
 
         if (window.location.href.includes("watch?")) { // If we are on a video page
             subscribeBtn = document.querySelector("#owner .ytd-subscribe-button-renderer");
-        } else if (window.location.href.includes("https://www.youtube.com/channel/") || window.location.href.includes("https://www.youtube.com/c/") || window.location.href.includes("https://www.youtube.com/user/") || alternative) { // If we are on a channel page
+        } else if (window.location.href.includes("/channel/") || window.location.href.includes("/c/") || window.location.href.includes("/user/") || alternative) { // If we are on a channel page
             subscribeBtn = document.querySelector("#channel-header .ytd-subscribe-button-renderer");
         }
 
@@ -882,8 +883,11 @@ class TabManager {
         else if (retry && !subscribeBtn) return;
 
         let targetChannel = this.getChannelIDFromPage();
-        let tab = this.tabData[this.badgeData[targetChannel].tabID]
+        let tab = this.tabData[this.badgeData[targetChannel]?.tabID]
         let subscribed = Array.from(this.badges).find((badge) => badge.id == targetChannel) != undefined;
+
+        console.log(subscribed);
+        if (!subscribed) return;
 
         // subscribeBtn.style.backgroundColor = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
         if (subscribeBtn.retractor) subscribeBtn.retractor.remove();

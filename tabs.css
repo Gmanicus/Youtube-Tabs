@@ -22,7 +22,7 @@
 
 @keyframes fade {
     from {background-color: transparent;}
-    to {background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
+    to {background-color: rgba(0, 0, 0, 0.5); }
 }
 
 :root {
@@ -619,6 +619,7 @@
     width: 100%;
     height: 100%;
     bottom: 30%;
+    z-index: -1;
 
     transition: all 0.15s ease-in-out;
     background-color: transparent;
@@ -629,7 +630,7 @@
     bottom: -70%;
 } .ytd-subscribe-button-renderer:hover > .ytt-subscribe-retractor:before {
     border-radius: 0 0 18px 18px;
-    height: 120%;
+    height: 130%;
     padding-top: 15%;
     border: 0px solid rgba(0, 0, 0, 0.5);
 } .ytt-subscribe-retractor:hover::before {
@@ -674,12 +675,6 @@
     background-image: url("https://i.imgur.com/hkamMkk.png");
 }
 
-yt-button-shape.ytd-subscribe-button-renderer {
-    transform-style: preserve-3d;
-} .ytd-subscribe-button-renderer.subscribed > button {
-    background-color: #3E3F3E !important;
-}
-
 ::-webkit-scrollbar {
     width: 5px;
 } ::-webkit-scrollbar-track {
@@ -694,8 +689,26 @@ yt-button-shape.ytd-subscribe-button-renderer {
 /* !! LIGHT THEME !! */
 
 /* Subscribe button */
-.ytt-light-theme .ytd-subscribe-button-renderer.subscribed > button {
+#owner .ytd-subscribe-button-renderer button:not([aria-label^="Subscribe"]) {
+    background-color: #2a2a2a !important;
+} #channel-header .ytd-subscribe-button-renderer button:not([aria-label^="Subscribe"]) {
+    background-color: #2a2a2a !important;
+}
+
+.ytt-light-theme #owner .ytd-subscribe-button-renderer button:not([aria-label^="Subscribe"]) {
     background-color: #F2F3F3 !important;
+} .ytt-light-theme #channel-header .ytd-subscribe-button-renderer button:not([aria-label^="Subscribe"]) {
+    background-color: #F2F3F3 !important;
+}
+
+#owner .ytd-subscribe-button-renderer {
+    position: relative;
+    z-index: 1;
+    transform-style: preserve-3d;
+} #channel-header .ytd-subscribe-button-renderer {
+    position: relative;
+    z-index: 1;
+    transform-style: preserve-3d;
 }
 
 /* Tab hover zone */
