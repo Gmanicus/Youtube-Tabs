@@ -34,10 +34,11 @@ window.onload = function() {
         let waitForSections = setInterval(()=>{
             let guideSections = document.getElementsByTagName("ytd-guide-section-renderer");
             if (guideSections.length < 2) return;
-            else clearInterval(waitForSections);
 
             // Get the 'Show more' subscriptions button in the guide and click it, causing the subscriptions to load
             let showMoreSubscriptions = guideSections[1].querySelector("#expander-item");
+            if (showMoreSubscriptions) clearInterval(waitForSections)
+            else return;
             showMoreSubscriptions.click();
 
             new TabManager();
