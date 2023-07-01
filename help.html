@@ -1,9 +1,10 @@
 
 
-<label id="upload-backup" class="tab-menu-btn" title="Upload tab data backup">
+<label id="upload-backup" class="tab-menu-btn" title="Import tab data backup">
     <input id="upload-file-picker" type="file" onchange="document.dispatchEvent(Event('ytt-import'))" accept=".json"></input>
 </label>
 <span id="export-backup" class="tab-menu-btn" title="Export tab data backup" onclick="document.dispatchEvent(Event('ytt-export'))"></span>
+<span id="close-popup" class="tab-menu-btn" onclick="document.dispatchEvent(Event('ytt-close-popup'))">X</span>
 <h1 style="text-align: center;">Youtube Tabs</h1>
 
 <br><br>

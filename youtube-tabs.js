@@ -36,10 +36,10 @@ window.onload = function() {
             if (guideSections.length < 2) return;
 
             // Get the 'Show more' subscriptions button in the guide and click it, causing the subscriptions to load
+            // Ignore if not found. User might not have enough subscriptions for this button to render
             let showMoreSubscriptions = guideSections[1].querySelector("#expander-item");
-            if (showMoreSubscriptions) clearInterval(waitForSections)
-            else return;
-            showMoreSubscriptions.click();
+            if (showMoreSubscriptions) showMoreSubscriptions.click();
+            clearInterval(waitForSections)
 
             new TabManager();
         }, 100)
@@ -180,6 +180,7 @@ class TabManager {
         // Listen for import/export requests
         document.addEventListener('ytt-import', this.importData.bind(this));
         document.addEventListener('ytt-export', this.exportData.bind(this));
+        document.addEventListener('ytt-close-popup', () => { this.activePage?.close(); });
     }
 
     logMessage(level, ...msg) {
@@ -207,8 +208,11 @@ class TabManager {
 
         this.setStyle(this.badgeContainer, { position: "relative" });
         // Move the elements from the 'expanded items' container to the badgeContainer
-        moveElementsTo(this.badgeContainer, ...this.badgeContainer.querySelector("#expandable-items").children);
-        this.badgeContainer.getElementsByTagName("ytd-guide-collapsible-entry-renderer")[0].remove(); // Remove the 'expander item' element so that the badgeContainer only contains subscription badges
+        // Will not exist if there is no 'Show more subscriptions' button
+        if (this.badgeContainer.querySelector("#expandable-items")) {
+            moveElementsTo(this.badgeContainer, ...this.badgeContainer.querySelector("#expandable-items").children);
+            this.badgeContainer.getElementsByTagName("ytd-guide-collapsible-entry-renderer")[0].remove(); // Remove the 'expander item' element so that the badgeContainer only contains subscription badges
+        }
 
         // Add widgets to the 'Subscriptions' header
         this.badgeHeader.appendChild(this.badgeContainer.parentElement.children[0]);
