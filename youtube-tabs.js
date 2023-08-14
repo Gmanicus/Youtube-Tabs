@@ -829,6 +829,7 @@ class TabManager {
         // Set event listeners to update tab when changes are made
         menu.colorPicker.on('color:change', (color) => { tab.style.borderColor = color.hexString; tab.color = color.hexString; } )
         menu.nameField.addEventListener('input', (e) => tab.setName(e.target.value) )
+        menu.addEventListener('keypress', (e) => { if (e.key === 'Enter') menu.close() } )
         
         // Set menu position to be right of the badge and centered vertically
         let viewportPosition = menu.getBoundingClientRect();
