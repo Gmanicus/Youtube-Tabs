@@ -14,7 +14,16 @@
   <br>
 </p>
 
+<hr>
 
+## ⚠️ Maintenance Mode
+<p>
+  Currently only prioritizing maintenance requests because I am limited in time. Change and feature requests may be not be addressed indefinitely.
+</p>
+<hr>
+
+<br>
+<br>
 
 As an alternative to adding the extension via the Chrome/Firefox webstores, clone the repo and load it as an unpacked extension via your `://extensions` page.
 
@@ -23,10 +32,7 @@ As an alternative to adding the extension via the Chrome/Firefox webstores, clon
 *Utilizes the [Iro.js color picker library](https://iro.js.org/)*
 
 ## Add Tabs
-![](https://i.imgur.com/pP4UMRx.gif)
-
-## Customize Colors and Names
-![](https://i.imgur.com/kkcO61I.gif)
+![](https://i.imgur.com/4y7itDy.gif)
 
 ## Organize Your Subscriptions
-![](https://i.imgur.com/IqTzINv.gif)
+![](https://i.imgur.com/371TxFK.gif)
