@@ -938,7 +938,7 @@ class TabManager {
     }
 
     getChannelIDFromBadge(badge) {
-        let channel = badge.children[0].title;
+        let channel = badge.querySelector('#endpoint').title;
         return channel; // channel IDs are either custom channel names or auto-generated IDs. I.e, they are inconsistent and can no longer be used
     }
 
