@@ -37,7 +37,7 @@
 }
 
 /* Copied from video title styling */
-.header {
+.ytt-header {
     font-family: "Roboto","Arial",sans-serif;
     font-size: 1.4rem;
     line-height: 2rem;
@@ -619,16 +619,18 @@
     width: 100%;
     height: 100%;
     bottom: 30%;
-    z-index: -1;
+    z-index: 0;
 
     transition: all 0.15s ease-in-out;
     background-color: transparent;
     color: transparent;
     transform: translateZ(-1px);
     padding: 0 !important;
-} .ytd-subscribe-button-renderer:hover > .ytt-subscribe-retractor {
+} .ytd-subscribe-button-renderer:hover > .ytt-subscribe-retractor,
+#subscribe-button:hover > .ytt-subscribe-retractor {
     bottom: -70%;
-} .ytd-subscribe-button-renderer:hover > .ytt-subscribe-retractor:before {
+} .ytd-subscribe-button-renderer:hover > .ytt-subscribe-retractor:before,
+#subscribe-button:hover > .ytt-subscribe-retractor:before {
     border-radius: 0 0 18px 18px;
     height: 130%;
     padding-top: 15%;

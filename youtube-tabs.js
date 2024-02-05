@@ -720,6 +720,7 @@ class TabManager {
      * @param {*} popupHost - The element to append this menu to. Defaults to the badge
      */
     badgeOptions(badge, popupHost) {
+        if (!badge) return;
         if (this.modal) this.activeMenu?.close();
         this.modal = true;
         
@@ -849,7 +850,7 @@ class TabManager {
         let popUp = this.createAndConfigureElement("div", { className: "new-badge-popup ytt-popup" });
         popUp.exit = this.createAndConfigureElement("btn", { className: "exit" });
         popUp.body = this.createAndConfigureElement("div", { className: "popup-body" });
-        popUp.text = this.createAndConfigureElement("p", { className: "header", innerHTML: "Where would you like to put this subscription?" });
+        popUp.text = this.createAndConfigureElement("p", { className: "ytt-header", innerHTML: "Where would you like to put this subscription?" });
         this.activePage = popUp;
         
         popUp.close = () => {
@@ -875,14 +876,15 @@ class TabManager {
     addSubscribeWidget(retry) {
         let subscribeBtn;
 
-        // Some creators can have their id directly after Youtube.com. Detect that
-        let alternative = window.location.href.match(/\.com(.*)/gm)[0]; alternative = alternative.substring(5);
-        if (alternative.includes("/")) alternative = null;
-
         if (window.location.href.includes("watch?")) { // If we are on a video page
-            subscribeBtn = document.querySelector("#owner .ytd-subscribe-button-renderer");
-        } else if (window.location.href.includes("/channel/") || window.location.href.includes("/c/") || window.location.href.includes("/user/") || alternative) { // If we are on a channel page
-            subscribeBtn = document.querySelector("#channel-header .ytd-subscribe-button-renderer");
+            subscribeBtn = document.querySelector("#subscribe-button");
+        } else if (
+            window.location.href.includes("/channel/")
+            || window.location.href.includes("/c/")
+            || window.location.href.includes("/user/")
+            || window.location.href.includes("/@")
+        ) { // If we are on a channel page
+            subscribeBtn = document.querySelector("#subscribe-button");
         }
 
         if (!retry && !subscribeBtn) { setTimeout(this.addSubscribeWidget.bind(this, true), 500); return; }
@@ -890,9 +892,8 @@ class TabManager {
 
         let targetChannel = this.getChannelIDFromPage();
         let tab = this.tabData[this.badgeData[targetChannel]?.tabID]
-        let subscribed = Array.from(this.badges).find((badge) => badge.id == targetChannel) != undefined;
+        let subscribed = subscribeBtn.querySelector(".yt-core-attributed-string")?.innerHTML.includes('Subscribed')
 
-        console.log(subscribed);
         if (!subscribed) return;
 
         // subscribeBtn.style.backgroundColor = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
@@ -910,6 +911,7 @@ class TabManager {
         if (subscribed) { subscribeBtn.classList.add("subscribed"); subscribeBtn.classList.remove("unsubscribed"); }
         else            { subscribeBtn.classList.remove("subscribed"); subscribeBtn.classList.add("unsubscribed"); }
 
+        subscribeBtn.style.setProperty('position', 'relative');
         subscribeBtn.appendChild(subscribeBtn.retractor);
         subscribeBtn.retractor.addEventListener("click", (e) => {
             e.stopPropagation();
