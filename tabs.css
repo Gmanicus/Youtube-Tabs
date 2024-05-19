@@ -156,14 +156,14 @@
     box-shadow: 0 0 16px 1px rgb(0 0 0 / 16%);
 }
 
-.btn {
+.ytt-btn {
     position: inline-block;
     width: 20px;
     height: 20px;
     margin: 5px;
     background-size: contain;
     transition: all 0.1s ease-in-out
-} .btn:hover {
+} .ytt-btn:hover {
     transform: scale(1.2);
     filter: contrast(100);
     cursor: pointer;
@@ -731,6 +731,6 @@
 }
 
 /* YTT Buttons */
-.ytt-light-theme .tab-menu-btn, .ytt-light-theme .badge-menu-btn, .ytt-light-theme .btn, .ytt-light-theme .badge-retractor::after {
+.ytt-light-theme .tab-menu-btn, .ytt-light-theme .badge-menu-btn, .ytt-light-theme .ytt-btn, .ytt-light-theme .badge-retractor::after {
     filter: invert(1);
 }

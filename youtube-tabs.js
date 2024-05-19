@@ -119,13 +119,13 @@ class TabManager {
         this.badgeContainer = this.sidePanel.querySelectorAll("#guide-content #items")[1];
         this.badgeHeader = this.createAndConfigureElement("div", { className: "badge-header" });
         this.newTab = this.createAndConfigureElement("span", {
-            className: "btn",
+            className: "ytt-btn",
             title: "New Tab",
             style: { backgroundImage: "url('https://i.imgur.com/zggQshn.png')" },
             event: { name: "click", callback: this.createNewTab.bind(this, null) }
         });
         this.info = this.createAndConfigureElement("span", {
-            className: "btn",
+            className: "ytt-btn",
             title: "Help/Info",
             style: { backgroundImage: "url('https://i.imgur.com/J39co3K.png')" },
             event: { name: "click", callback: this.help.bind(this) }
@@ -683,7 +683,7 @@ class TabManager {
         this.modal = true;
 
         let popUp = this.createAndConfigureElement("div", { className: "ytt-popup" });
-        popUp.exit = this.createAndConfigureElement("btn", { className: "exit" });
+        popUp.exit = this.createAndConfigureElement("ytt-btn", { className: "exit" });
         popUp.body = this.createAndConfigureElement("div", { className: "popup-body" });
         this.activePage = popUp;
         
@@ -848,7 +848,7 @@ class TabManager {
         this.modal = true;
 
         let popUp = this.createAndConfigureElement("div", { className: "new-badge-popup ytt-popup" });
-        popUp.exit = this.createAndConfigureElement("btn", { className: "exit" });
+        popUp.exit = this.createAndConfigureElement("ytt-btn", { className: "exit" });
         popUp.body = this.createAndConfigureElement("div", { className: "popup-body" });
         popUp.text = this.createAndConfigureElement("p", { className: "ytt-header", innerHTML: "Where would you like to put this subscription?" });
         this.activePage = popUp;

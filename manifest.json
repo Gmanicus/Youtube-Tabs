@@ -1,8 +1,8 @@
 {
   "name": "Youtube Tabs - Subscription Organization Tool",
   "description": "Tidy up your Youtube subscription list with tab organization features",
-  "version": "2.0.11",
-  "manifest_version": 2,
+  "version": "2.0.12",
+  "manifest_version": 3,
   "icons": {
     "128": "icon.png",
     "48": "icon.png"
@@ -14,5 +14,8 @@
       "css": ["tabs.css"]
     }
   ],
-  "web_accessible_resources": ["help.html"]
+  "web_accessible_resources": [{
+      "resources": ["help.html"],
+      "matches": ["https://www.youtube.com/*"]
+  }]
 }
