@@ -176,11 +176,6 @@ class TabManager {
             localStorage.setItem("ytt_version", this.version);
             this.help();
         }
-
-        // Listen for import/export requests
-        document.addEventListener('ytt-import', this.importData.bind(this));
-        document.addEventListener('ytt-export', this.exportData.bind(this));
-        document.addEventListener('ytt-close-popup', () => { this.activePage?.close(); });
     }
 
     logMessage(level, ...msg) {
@@ -705,6 +700,16 @@ class TabManager {
 
         moveElementsTo(popUp, ...[popUp.exit, popUp.body]);
         document.body.appendChild(popUp);
+
+        // Poll until event listeners can be added
+        const eventRegister = setInterval(() => {
+            const dom = document.querySelector('.ytt-popup');
+            if (!dom) return;
+            dom.querySelector('#export-backup')?.addEventListener('click', () => this.exportData());
+            dom.querySelector('#close-popup')?.addEventListener('click', () => popUp.close());
+            dom.querySelector('#upload-file-picker')?.addEventListener('change', () => this.importData());
+            clearInterval(eventRegister);
+        }, 50);
     }
 
     createNewTab(badge) {
@@ -956,7 +961,7 @@ class TabManager {
 
     isLightTheme() {
         let style = window.getComputedStyle(document.querySelector("ytd-app"));
-        let color = style.getPropertyValue("--yt-spec-base-background").replace(" ", "");
+        let color = style.getPropertyValue("--yt-sys-color-baseline--menu-background").replace(" ", "");
 
         return lightOrDark(color) == "light";
     }
@@ -996,11 +1001,36 @@ class TabManager {
             tabs: this.tabData
         }
 
-        let file = new Blob([JSON.stringify(exportContent)], {type: 'application/json'});
-        let a = document.createElement("a");
-        a.href = URL.createObjectURL(file);
-        a.download = `ytt-backup ${new Date().toDateString()}`;
-        a.click(); URL.revokeObjectURL(a.href);
+        const filename = `ytt-backup-${new Date().toISOString().split('T').at(0)}.json`;
+        const message = {
+            type: "ytt-export-backup",
+            filename,
+            payload: JSON.stringify(exportContent)
+        };
+
+        try {
+            let response = null;
+
+            // Chrome uses callback-style messaging; Firefox uses Promise-based browser API.
+            if (typeof browser !== "undefined") {
+                response = await browser.runtime.sendMessage(message);
+            } else {
+                response = await new Promise((resolve, reject) => {
+                    chrome.runtime.sendMessage(message, (result) => {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                            return;
+                        }
+                        resolve(result);
+                    });
+                });
+            }
+
+            if (!response?.ok) throw new Error(response?.error || "Export request failed.");
+        } catch (e) {
+            this.logMessage("error", "Export failed in background worker", e);
+            alert("Export failed. Please reload the page and try again.");
+        }
     }
 
     async importData() {
