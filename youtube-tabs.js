@@ -994,42 +994,23 @@ class TabManager {
         localStorage.setItem("ytt-tabs", JSON.stringify(this.tabData));
     }
 
+    // Gather the backup data and let the shared blob service download it.
     async exportData() {
+        // Include the version so an imported backup can be checked for the expected format.
         let exportContent = {
             version: this.version,
             badges: this.badgeData,
             tabs: this.tabData
         }
 
+        // The service runs as an extension content script, separate from YouTube's page scripts.
         const filename = `ytt-backup-${new Date().toISOString().split('T').at(0)}.json`;
-        const message = {
-            type: "ytt-export-backup",
-            filename,
-            payload: JSON.stringify(exportContent)
-        };
 
         try {
-            let response = null;
-
-            // Chrome uses callback-style messaging; Firefox uses Promise-based browser API.
-            if (typeof browser !== "undefined") {
-                response = await browser.runtime.sendMessage(message);
-            } else {
-                response = await new Promise((resolve, reject) => {
-                    chrome.runtime.sendMessage(message, (result) => {
-                        if (chrome.runtime.lastError) {
-                            reject(new Error(chrome.runtime.lastError.message));
-                            return;
-                        }
-                        resolve(result);
-                    });
-                });
-            }
-
-            if (!response?.ok) throw new Error(response?.error || "Export request failed.");
+            globalThis.yttBlobService.downloadJson(JSON.stringify(exportContent), filename);
         } catch (e) {
-            this.logMessage("error", "Export failed in background worker", e);
-            alert("Export failed. Please reload the page and try again.");
+            this.logMessage("error", "Export failed", e);
+            alert("Export failed. Please try again.");
         }
     }
 
